@@ -117,3 +117,21 @@ To start the Expo Metro Bundler (runs on port `8081`):
 corepack yarn workspace mobile start
 ```
 From the Expo terminal menu, you can press **`w`** to open in the browser, or scan the QR code using your Expo Go app on iOS or Android.
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/Amankumar006/Reel-Taste-/issues) if you want to contribute.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See [LICENSE](file:///Users/amankumar/Aman/movies/LICENSE) for more information.
