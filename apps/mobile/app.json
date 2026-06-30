@@ -74,8 +74,13 @@
     },
     "extra": {
       "router": {
-        "origin": false
+        "origin": false,
+        "sitemap": false
+      },
+      "eas": {
+        "projectId": "c50da027-6cad-43e5-b42f-50dbb086d73b"
       }
-    }
+    },
+    "owner": "006aman_kumar"
   }
 }
