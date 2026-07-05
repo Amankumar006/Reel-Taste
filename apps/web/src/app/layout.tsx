@@ -4,8 +4,8 @@ import "./global.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-	title: "Anything App",
-	description: "Created with Anything",
+	title: "Reel Taste",
+	description: "Personalized movie discovery app",
 	icons: {
 		icon: "/favicon.png",
 	},
