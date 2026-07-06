@@ -748,6 +748,8 @@ export default function DiscoverScreen() {
     if (loaded && !prefs.onboarded) router.replace('/onboarding' as any);
   }, [loaded, prefs.onboarded, router]);
 
+  const [mediaCategory, setMediaCategory] = useState<'movies' | 'anime' | 'games'>('movies');
+
   const {
     data: discoverData,
     isLoading: discoverLoading,
@@ -764,14 +766,99 @@ export default function DiscoverScreen() {
     initialPageParam: 1,
     getNextPageParam: (last) =>
       last.page < Math.min(last.totalPages, 8) ? last.page + 1 : undefined,
-    enabled: prefs.onboarded,
+    enabled: prefs.onboarded && mediaCategory === 'movies',
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: searchData, isLoading: searchLoading } = useQuery({
     queryKey: ['search', searchQuery],
     queryFn: () => fetchSearch(searchQuery),
-    enabled: prefs.onboarded && isSearching,
+    enabled: prefs.onboarded && isSearching && mediaCategory === 'movies',
+    staleTime: 60 * 1000,
+  });
+
+  // Curated list of popular anime AIDs
+  const animeIds = useMemo(() => [262, 410, 7663, 120, 5251, 11608, 1, 4], []);
+
+  // Fetch all curated anime details in parallel
+  const { data: animeList, isLoading: animeLoading } = useQuery({
+    queryKey: ['anime-picks'],
+    queryFn: async () => {
+      const results = await Promise.all(
+        animeIds.map(async (id) => {
+          try {
+            const res = await fetch(`${BASE}/api/anime/${id}`);
+            if (!res.ok) return null;
+            const item = await res.json();
+            return {
+              ...item,
+              isAnime: true,
+              year: item.releaseDate ? item.releaseDate.split('-')[0] : null,
+              matchPercent: 90 + (id % 8),
+              reasons: ['AniDB Top Ranked', 'Matches Anime preference'],
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      return results.filter(Boolean);
+    },
+    enabled: prefs.onboarded && mediaCategory === 'anime',
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Curated list of popular game IDs
+  const gameIds = useMemo(() => [64591, 313424, 622788, 1273796, 70805, 191843, 267893, 206420], []);
+
+  // Fetch all curated game details in parallel
+  const { data: gameList, isLoading: gameLoading } = useQuery({
+    queryKey: ['game-picks'],
+    queryFn: async () => {
+      const results = await Promise.all(
+        gameIds.map(async (id) => {
+          try {
+            const res = await fetch(`${BASE}/api/games/${id}`);
+            if (!res.ok) return null;
+            const item = await res.json();
+            return {
+              ...item,
+              id: item.id,
+              title: item.title,
+              synopsis: item.overview,
+              posterPath: item.posterPath,
+              backdropPath: item.backdropPath,
+              year: item.releaseDate ? item.releaseDate.split('-')[0] : null,
+              score: Math.round(item.voteAverage * 10),
+              isGame: true,
+              matchPercent: 90 + (id % 8),
+              reasons: ['High Player Rating', 'Recommended Strategy/RPG'],
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      return results.filter(Boolean);
+    },
+    enabled: prefs.onboarded && mediaCategory === 'games' && !isSearching,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Game search results
+  const { data: gameSearchData, isLoading: gameSearchLoading } = useQuery({
+    queryKey: ['game-search', searchQuery],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}/api/games?query=${encodeURIComponent(searchQuery)}`);
+      if (!res.ok) throw new Error('Game search failed');
+      const data = await res.json();
+      return data.games.map((g: any) => ({
+        ...g,
+        isGame: true,
+        reasons: ['Search Result'],
+      }));
+    },
+    enabled: prefs.onboarded && isSearching && mediaCategory === 'games',
     staleTime: 60 * 1000,
   });
 
@@ -788,15 +875,32 @@ export default function DiscoverScreen() {
     [searchData, prefs]
   );
 
-  const activeMovies = isSearching ? searchResults : recommendations;
-  const isLoading = isSearching ? searchLoading : discoverLoading;
+  const activeMovies = isSearching
+    ? (mediaCategory === 'games' ? (gameSearchData ?? []) : searchResults)
+    : mediaCategory === 'anime'
+    ? (animeList ?? [])
+    : mediaCategory === 'games'
+    ? (gameList ?? [])
+    : recommendations;
+
+  const isLoading = isSearching
+    ? (mediaCategory === 'games' ? gameSearchLoading : searchLoading)
+    : mediaCategory === 'anime'
+    ? animeLoading
+    : mediaCategory === 'games'
+    ? gameLoading
+    : discoverLoading;
 
   const handleMoviePress = useCallback(
     (movie: any) => {
       haptic('light');
       router.push({
         pathname: '/movie/[id]' as any,
-        params: { id: movie.id, tag: `image-${movie.id}` },
+        params: {
+          id: movie.id,
+          tag: `image-${movie.id}`,
+          type: movie.isGame ? 'game' : (movie.isAnime ? 'anime' : 'movie')
+        },
       });
     },
     [router]
@@ -818,7 +922,7 @@ export default function DiscoverScreen() {
     );
   }
 
-  const displayMovies = isSearching ? activeMovies : activeMovies.slice(1);
+  const displayMovies = isSearching || mediaCategory === 'anime' || mediaCategory === 'games' ? activeMovies : activeMovies.slice(1);
 
   const renderHeader = () => (
     <View style={{ paddingTop: 12 }}>
@@ -848,8 +952,95 @@ export default function DiscoverScreen() {
               marginTop: 2,
             }}
           >
-            {recommendations.length > 0 ? 'Your Picks' : 'Explore Films'}
+            {mediaCategory === 'anime' ? 'Top Anime' : (mediaCategory === 'games' ? 'Top Games' : (recommendations.length > 0 ? 'Your Picks' : 'Explore Films'))}
           </Text>
+        </MotiView>
+      )}
+
+      {/* Category switcher */}
+      {!isSearching && (
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: 'rgba(255,255,255,0.04)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.08)',
+            padding: 4,
+            borderRadius: 100,
+            marginHorizontal: 16,
+            marginBottom: 16,
+            alignSelf: 'flex-start',
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => {
+              haptic('light');
+              setMediaCategory('movies');
+            }}
+            style={{
+              paddingHorizontal: 18,
+              paddingVertical: 7,
+              borderRadius: 100,
+              backgroundColor: mediaCategory === 'movies' ? '#14b8a6' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                color: mediaCategory === 'movies' ? '#fff' : 'rgba(255,255,255,0.6)',
+                fontSize: 12,
+                fontWeight: '700',
+              }}
+            >
+              Movies
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              haptic('light');
+              setMediaCategory('anime');
+            }}
+            style={{
+              paddingHorizontal: 18,
+              paddingVertical: 7,
+              borderRadius: 100,
+              backgroundColor: mediaCategory === 'anime' ? '#14b8a6' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                color: mediaCategory === 'anime' ? '#fff' : 'rgba(255,255,255,0.6)',
+                fontSize: 12,
+                fontWeight: '700',
+              }}
+            >
+              Anime (AniDB)
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              haptic('light');
+              setMediaCategory('games');
+            }}
+            style={{
+              paddingHorizontal: 18,
+              paddingVertical: 7,
+              borderRadius: 100,
+              backgroundColor: mediaCategory === 'games' ? '#14b8a6' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                color: mediaCategory === 'games' ? '#fff' : 'rgba(255,255,255,0.6)',
+                fontSize: 12,
+                fontWeight: '700',
+              }}
+            >
+              Games (GameBrain)
+            </Text>
+          </TouchableOpacity>
         </MotiView>
       )}
 
@@ -876,7 +1067,7 @@ export default function DiscoverScreen() {
           onChangeText={setSearchQuery}
           onFocus={() => setSearchFocused(true)}
           onBlur={() => setSearchFocused(false)}
-          placeholder="Search any movie…"
+          placeholder={mediaCategory === 'games' ? "Search any game…" : "Search any movie…"}
           placeholderTextColor="rgba(255,255,255,0.35)"
           style={{ flex: 1, color: '#fff', fontSize: 14 }}
         />
@@ -955,7 +1146,7 @@ export default function DiscoverScreen() {
       )}
 
       {/* Hero carousel */}
-      {!isLoading && !isSearching && recommendations.length > 0 && (
+      {!isLoading && !isSearching && mediaCategory === 'movies' && recommendations.length > 0 && (
         <HeroCarousel movies={recommendations} onRate={handleRate} onPress={handleMoviePress} />
       )}
 
@@ -983,7 +1174,7 @@ export default function DiscoverScreen() {
               textTransform: 'uppercase',
             }}
           >
-            {isSearching ? `Results for "${searchQuery}"` : 'More Picks'}
+            {isSearching ? `Results for "${searchQuery}"` : (mediaCategory === 'anime' ? 'AniDB Picks' : 'More Picks')}
           </Text>
         </MotiView>
       )}
@@ -1023,29 +1214,9 @@ export default function DiscoverScreen() {
   );
 
   const renderFooter = () => (
-    <View style={{ paddingBottom: 16, paddingTop: 8 }}>
-      {!isSearching && hasNextPage && (
-        <TouchableOpacity
-          onPress={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-          style={{
-            alignSelf: 'center',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.1)',
-            backgroundColor: 'rgba(255,255,255,0.04)',
-            paddingHorizontal: 28,
-            paddingVertical: 13,
-            borderRadius: 100,
-          }}
-        >
-          {isFetchingNextPage ? <ActivityIndicator size="small" color="#2dd4bf" /> : null}
-          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '600' }}>
-            {isFetchingNextPage ? 'Loading…' : 'Load more'}
-          </Text>
-        </TouchableOpacity>
+    <View style={{ paddingBottom: 24, paddingTop: 12 }}>
+      {isFetchingNextPage && (
+        <ActivityIndicator size="small" color="#2dd4bf" />
       )}
     </View>
   );
@@ -1160,6 +1331,12 @@ export default function DiscoverScreen() {
           ListHeaderComponent={renderHeader}
           ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}
+          onEndReached={() => {
+            if (!isSearching && mediaCategory === 'movies' && hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching && !isFetchingNextPage}
@@ -1187,7 +1364,7 @@ export default function DiscoverScreen() {
                   <View style={{ height: 230 }}>
                     {movie.posterPath ? (
                       <Image
-                        source={{ uri: `${TMDB_IMAGE_BASE}${movie.posterPath}` }}
+                        source={{ uri: movie.posterPath.startsWith('http') ? movie.posterPath : `${TMDB_IMAGE_BASE}${movie.posterPath}` }}
                         style={{ width: '100%', height: '100%' }}
                         contentFit="cover"
                         transition={200}

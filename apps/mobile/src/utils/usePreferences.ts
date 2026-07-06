@@ -48,10 +48,32 @@ export function usePreferences() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    loadPrefs().then((p) => {
-      setPrefs(p);
-      setLoaded(true);
-    });
+    let active = true;
+    
+    // 1.5s timeout safety gate to prevent hanging on device native module locks
+    const timeout = new Promise<Preferences>((resolve) =>
+      setTimeout(() => {
+        console.warn('AsyncStorage loadPrefs timed out, fallback to defaults');
+        resolve(DEFAULT_PREFS);
+      }, 1500)
+    );
+
+    Promise.race([loadPrefs(), timeout])
+      .then((p) => {
+        if (!active) return;
+        setPrefs(p);
+        setLoaded(true);
+      })
+      .catch((err) => {
+        console.error('AsyncStorage loadPrefs failed:', err);
+        if (!active) return;
+        setPrefs(DEFAULT_PREFS);
+        setLoaded(true);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const update = useCallback((next: Preferences) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   Film,
@@ -46,6 +46,7 @@ export default function HomePage() {
   const [greeting, setGreeting] = useState('Good Evening'); // stable default
   const [showHeroModal, setShowHeroModal] = useState(false);
   const isSearching = searchQuery.trim().length >= 2;
+  const [mediaCategory, setMediaCategory] = useState<'movies' | 'anime' | 'games'>('movies');
 
   // Update greeting after mount to avoid hydration mismatch
   useEffect(() => {
@@ -70,15 +71,120 @@ export default function HomePage() {
     initialPageParam: 1,
     getNextPageParam: (last) =>
       last.page < Math.min(last.totalPages, 8) ? last.page + 1 : undefined,
-    enabled: prefs.onboarded,
+    enabled: prefs.onboarded && mediaCategory === 'movies',
     staleTime: 5 * 60 * 1000,
   });
+
+  const observerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (isSearching || mediaCategory !== 'movies' || !hasNextPage || isFetchingNextPage) return;
+    const el = observerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          void fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, isSearching, mediaCategory, fetchNextPage]);
 
   // Search results
   const { data: searchData, isLoading: searchLoading } = useQuery({
     queryKey: ['search', searchQuery],
     queryFn: () => fetchSearch(searchQuery),
-    enabled: prefs.onboarded && isSearching,
+    enabled: prefs.onboarded && isSearching && mediaCategory === 'movies',
+    staleTime: 60 * 1000,
+  });
+
+  // Curated list of popular anime AIDs
+  const animeIds = useMemo(() => [262, 410, 7663, 120, 5251, 11608, 1, 4], []);
+
+  // Fetch all curated anime details in parallel
+  const { data: animeList, isLoading: animeLoading } = useQuery({
+    queryKey: ['anime-picks'],
+    queryFn: async () => {
+      const results = await Promise.all(
+        animeIds.map(async (id) => {
+          try {
+            const res = await fetch(`/api/anime/${id}`);
+            if (!res.ok) return null;
+            const item = await res.json();
+            return {
+              ...item,
+              isAnime: true,
+              year: item.releaseDate ? item.releaseDate.split('-')[0] : null,
+              matchPercent: 90 + (id % 8), 
+              reasons: ['AniDB Top Ranked', 'Matches Anime preference'],
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      return results.filter(Boolean);
+    },
+    enabled: prefs.onboarded && mediaCategory === 'anime',
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Curated list of popular game IDs
+  const gameIds = useMemo(() => [64591, 313424, 622788, 1273796, 70805, 191843, 267893, 206420], []);
+
+  // Fetch all curated game details in parallel
+  const { data: gameList, isLoading: gameLoading } = useQuery({
+    queryKey: ['game-picks'],
+    queryFn: async () => {
+      const results = await Promise.all(
+        gameIds.map(async (id) => {
+          try {
+            const res = await fetch(`/api/games/${id}`);
+            if (!res.ok) return null;
+            const item = await res.json();
+            return {
+              ...item,
+              id: item.id,
+              title: item.title,
+              synopsis: item.overview,
+              posterPath: item.posterPath,
+              backdropPath: item.backdropPath,
+              year: item.releaseDate ? item.releaseDate.split('-')[0] : null,
+              score: Math.round(item.voteAverage * 10),
+              isGame: true,
+              matchPercent: 90 + (id % 8),
+              reasons: ['High Player Rating', 'Recommended Strategy/RPG'],
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      return results.filter(Boolean);
+    },
+    enabled: prefs.onboarded && mediaCategory === 'games' && !isSearching,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Game search results
+  const { data: gameSearchData, isLoading: gameSearchLoading } = useQuery({
+    queryKey: ['game-search', searchQuery],
+    queryFn: async () => {
+      const res = await fetch(`/api/games?query=${encodeURIComponent(searchQuery)}`);
+      if (!res.ok) throw new Error('Game search failed');
+      const data = await res.json();
+      return data.games.map((g: any) => ({
+        ...g,
+        isGame: true,
+        reasons: ['Search Result'],
+      }));
+    },
+    enabled: prefs.onboarded && isSearching && mediaCategory === 'games',
     staleTime: 60 * 1000,
   });
 
@@ -98,8 +204,22 @@ export default function HomePage() {
     [searchData, prefs]
   );
 
-  const activeMovies = isSearching ? searchResults : recommendations;
-  const isLoading = isSearching ? searchLoading : discoverLoading;
+  const activeMovies = isSearching
+    ? (mediaCategory === 'games' ? (gameSearchData ?? []) : searchResults)
+    : mediaCategory === 'anime'
+    ? (animeList ?? [])
+    : mediaCategory === 'games'
+    ? (gameList ?? [])
+    : recommendations;
+
+  const isLoading = isSearching
+    ? (mediaCategory === 'games' ? gameSearchLoading : searchLoading)
+    : mediaCategory === 'anime'
+    ? animeLoading
+    : mediaCategory === 'games'
+    ? gameLoading
+    : discoverLoading;
+
   const heroMovie = activeMovies[0];
   const restMovies = activeMovies.slice(1);
 
@@ -133,15 +253,35 @@ export default function HomePage() {
   if (!prefs.onboarded) return <Onboarding onComplete={completeOnboarding} />;
 
   const likeCount = ratedMovies.filter((r) => r.rating === 'up').length;
-  const discoverHeading = isSearching ? `Results for "${searchQuery}"` : `${greeting}, Film Lover`;
+  const discoverHeading = isSearching
+    ? `Results for "${searchQuery}"`
+    : mediaCategory === 'anime'
+    ? 'Highly Rated Anime'
+    : mediaCategory === 'games'
+    ? 'Top Video Games'
+    : `${greeting}, Film Lover`;
   const discoverSubtext = isSearching
     ? 'Scored against your taste profile — your preferred genres rank higher.'
+    : mediaCategory === 'anime'
+    ? 'Curated top-ranked anime fetched directly from AniDB.'
+    : mediaCategory === 'games'
+    ? 'Discover and purchase video games powered by GameBrain.co.'
     : 'Ranked by your taste profile and streaming availability.';
   const loadMoreLabel = isFetchingNextPage ? 'Loading…' : 'Load more';
-  const loadingLabel = isSearching ? 'Searching…' : 'Fetching recommendations…';
+  const loadingLabel = isSearching
+    ? 'Searching…'
+    : mediaCategory === 'anime'
+    ? 'Loading AniDB Anime details…'
+    : mediaCategory === 'games'
+    ? 'Loading GameBrain Game details…'
+    : 'Fetching recommendations…';
   const emptyHeading = isSearching ? 'No results found.' : 'Nothing to show yet.';
   const emptySubtext = isSearching
     ? 'Try a different title.'
+    : mediaCategory === 'anime'
+    ? 'Unable to load anime details.'
+    : mediaCategory === 'games'
+    ? 'Unable to load video games.'
     : 'Add genres in Preferences to load picks.';
 
   return (
@@ -183,7 +323,7 @@ export default function HomePage() {
               />
               <input
                 type="text"
-                placeholder="Search any movie…"
+                placeholder={mediaCategory === 'games' ? "Search any game…" : "Search any movie…"}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-full border border-white/10 bg-white/5 py-2 pl-9 pr-9 text-sm text-white placeholder:text-white/40 backdrop-blur-xl focus:border-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400"
@@ -215,6 +355,45 @@ export default function HomePage() {
               <h1 className="text-3xl font-bold tracking-tight text-white">{discoverHeading}</h1>
               <p className="text-sm font-normal text-white/60">{discoverSubtext}</p>
             </div>
+
+            {/* Category Switcher (only shown when not searching) */}
+            {!isSearching && (
+              <div className="flex items-center gap-1 mb-8 bg-white/5 border border-white/10 p-1 rounded-full w-fit">
+                <button
+                  type="button"
+                  onClick={() => setMediaCategory('movies')}
+                  className={`px-5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    mediaCategory === 'movies'
+                      ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20'
+                      : 'text-white/60 hover:text-white/80'
+                  }`}
+                >
+                  Movies
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaCategory('anime')}
+                  className={`px-5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    mediaCategory === 'anime'
+                      ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20'
+                      : 'text-white/60 hover:text-white/80'
+                  }`}
+                >
+                  Anime (AniDB)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaCategory('games')}
+                  className={`px-5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    mediaCategory === 'games'
+                      ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20'
+                      : 'text-white/60 hover:text-white/80'
+                  }`}
+                >
+                  Games (GameBrain)
+                </button>
+              </div>
+            )}
 
             {isLoading && (
               <div className="mt-12 flex flex-col items-center gap-3 text-white/60">
@@ -251,9 +430,10 @@ export default function HomePage() {
                     <div className="absolute inset-0">
                       {heroMovie.backdropPath && (
                         <img
-                          src={`https://image.tmdb.org/t/p/w1280${heroMovie.backdropPath}`}
+                          src={heroMovie.backdropPath.startsWith('http') ? heroMovie.backdropPath : `https://image.tmdb.org/t/p/w1280${heroMovie.backdropPath}`}
                           alt={heroMovie.title}
                           className="h-full w-full object-cover"
+                          referrerPolicy="no-referrer"
                         />
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
@@ -278,30 +458,25 @@ export default function HomePage() {
 
                 {/* Movie grid */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {(isSearching ? activeMovies : restMovies).map((movie) => (
+                  {(isSearching ? activeMovies : restMovies).map((movie: any) => (
                     <MovieCard
                       key={movie.id}
                       movie={movie}
                       matchPercent={movie.matchPercent}
                       reasons={movie.reasons}
+                      isGame={mediaCategory === 'games' || movie.isGame}
                       rating={prefs.ratings[String(movie.id)]?.rating}
                       onRate={rateMovie}
                     />
                   ))}
                 </div>
 
-                {/* Load more — only in discover (not search) */}
-                {!isSearching && hasNextPage && (
-                  <div className="mt-8 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => fetchNextPage()}
-                      disabled={isFetchingNextPage}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white/70 backdrop-blur-xl transition-all hover:bg-white/10 disabled:opacity-50"
-                    >
-                      {isFetchingNextPage && <Loader2 size={14} className="icon-spin" />}
-                      {loadMoreLabel}
-                    </button>
+                {/* Infinite scroll sentinel */}
+                {!isSearching && mediaCategory === 'movies' && hasNextPage && (
+                  <div ref={observerRef} className="mt-8 flex justify-center py-4">
+                    {isFetchingNextPage && (
+                      <Loader2 size={24} className="animate-spin text-teal-400" />
+                    )}
                   </div>
                 )}
               </>
@@ -527,7 +702,12 @@ export default function HomePage() {
 
       {/* Hero Detail Modal */}
       {showHeroModal && heroMovie && (
-        <MovieDetailModal movieId={heroMovie.id} onClose={() => setShowHeroModal(false)} />
+        <MovieDetailModal
+          movieId={heroMovie.id}
+          isAnime={heroMovie.isAnime}
+          isGame={mediaCategory === 'games' || heroMovie.isGame}
+          onClose={() => setShowHeroModal(false)}
+        />
       )}
     </div>
   );

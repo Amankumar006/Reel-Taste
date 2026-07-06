@@ -6,6 +6,8 @@ import { TMDB_IMAGE_BASE } from '@/app/data/movies';
 
 interface MovieDetailModalProps {
   movieId: number | string;
+  isAnime?: boolean;
+  isGame?: boolean;
   onClose: () => void;
 }
 
@@ -21,13 +23,23 @@ interface MovieDetails {
   posterPath: string | null;
   backdropPath: string | null;
   genres: string[];
-  cast: Array<{ id: number; name: string; character: string; profilePath: string | null }>;
-  director: { name: string; id: number } | null;
+  cast: Array<{ id: number | string; name: string; character: string; profilePath: string | null }>;
+  director: { name: string; id: number | string } | null;
   trailer: { key: string; name: string } | null;
   services: Array<{ id: string; name: string; logoPath: string }>;
+  // Anime specific
+  type?: string;
+  episodeCount?: number;
+  officialUrl?: string;
+  // Game specific
+  isGame?: boolean;
+  link?: string;
+  offers?: Array<{ store_name: string; price: string; url: string }>;
+  screenshots?: string[];
+  playtimeText?: string;
 }
 
-export default function MovieDetailModal({ movieId, onClose }: MovieDetailModalProps) {
+export default function MovieDetailModal({ movieId, isAnime = false, isGame = false, onClose }: MovieDetailModalProps) {
   const [details, setDetails] = useState<MovieDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,18 +47,41 @@ export default function MovieDetailModal({ movieId, onClose }: MovieDetailModalP
   useEffect(() => {
     async function fetchDetails() {
       try {
-        const res = await fetch(`/api/movies/${movieId}`);
+        const endpoint = isGame
+          ? `/api/games/${movieId}`
+          : isAnime
+          ? `/api/anime/${movieId}`
+          : `/api/movies/${movieId}`;
+        const res = await fetch(endpoint);
         if (!res.ok) throw new Error('Failed to load details');
         const data = await res.json();
-        setDetails(data);
+        
+        // Normalize fields if it's an anime
+        if (isAnime) {
+          setDetails({
+            ...data,
+            overview: data.synopsis || '',
+            voteAverage: data.score ? data.score / 10 : 0,
+            voteCount: data.score ? 1 : 0,
+            tagline: data.type ? `${data.type} · ${data.episodeCount || 0} eps` : null,
+            services: data.officialUrl ? [{ id: 'official', name: 'Official Site', logoPath: '' }] : [],
+          });
+        } else if (isGame) {
+          setDetails({
+            ...data,
+            tagline: data.playtimeText || null,
+          });
+        } else {
+          setDetails(data);
+        }
       } catch (err: any) {
-        setError(err.message || 'Could not load movie details');
+        setError(err.message || 'Could not load details');
       } finally {
         setLoading(false);
       }
     }
     fetchDetails();
-  }, [movieId]);
+  }, [movieId, isAnime, isGame]);
 
   // Close on Escape key
   useEffect(() => {
@@ -85,7 +120,7 @@ export default function MovieDetailModal({ movieId, onClose }: MovieDetailModalP
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl max-w-md">
-          <p className="text-sm font-medium text-white mb-4">{error || 'Movie not found'}</p>
+          <p className="text-sm font-medium text-white mb-4">{error || 'Details not found'}</p>
           <button
             type="button"
             onClick={onClose}
@@ -104,6 +139,14 @@ export default function MovieDetailModal({ movieId, onClose }: MovieDetailModalP
   const runtimeText = details.runtime ? `${runtimeHours}h ${runtimeMins}m` : null;
   const scoreText = details.voteAverage ? details.voteAverage.toFixed(1) : null;
 
+  // Resolve poster and backdrop URLs (AniDB has full URLs, TMDB needs image base)
+  const posterUrl = details.posterPath
+    ? (details.posterPath.startsWith('http') ? details.posterPath : `${TMDB_IMAGE_BASE}${details.posterPath}`)
+    : null;
+  const backdropUrl = details.backdropPath
+    ? (details.backdropPath.startsWith('http') ? details.backdropPath : `https://image.tmdb.org/t/p/w1280${details.backdropPath}`)
+    : null;
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm">
       <div className="min-h-screen px-4 py-8 flex items-center justify-center">
@@ -116,14 +159,15 @@ export default function MovieDetailModal({ movieId, onClose }: MovieDetailModalP
           >
             <X size={20} />
           </button>
-
+          
           {/* Backdrop header */}
-          {details.backdropPath && (
+          {backdropUrl && (
             <div className="relative h-80">
               <img
-                src={`https://image.tmdb.org/t/p/w1280${details.backdropPath}`}
+                src={backdropUrl}
                 alt={details.title}
                 className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/60 to-transparent" />
             </div>
@@ -133,12 +177,13 @@ export default function MovieDetailModal({ movieId, onClose }: MovieDetailModalP
           <div className="relative -mt-40 px-8 pb-8">
             <div className="flex flex-col md:flex-row gap-6">
               {/* Poster */}
-              {details.posterPath && (
+              {posterUrl && (
                 <div className="shrink-0 w-48 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
                   <img
-                    src={`${TMDB_IMAGE_BASE}${details.posterPath}`}
+                    src={posterUrl}
                     alt={details.title}
                     className="w-full h-auto"
+                    referrerPolicy="no-referrer"
                   />
                 </div>
               )}
@@ -192,13 +237,64 @@ export default function MovieDetailModal({ movieId, onClose }: MovieDetailModalP
                 {/* Director */}
                 {details.director && (
                   <p className="text-sm text-white/60 mb-6">
-                    <span className="font-semibold text-white/80">Directed by:</span>{' '}
+                    <span className="font-semibold text-white/80">{isGame ? 'Developer:' : (isAnime ? 'Director:' : 'Directed by:')}</span>{' '}
                     {details.director.name}
                   </p>
                 )}
 
-                {/* Watch Now buttons */}
-                {details.services.length > 0 && (
+                {/* Game specific offers */}
+                {isGame && details.offers && details.offers.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-white mb-3">Where to Buy / Play</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {details.offers.map((offer, idx) => (
+                        <a
+                          key={idx}
+                          href={offer.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-full border border-teal-400/50 bg-teal-500/20 px-4 py-2 text-sm font-medium text-teal-300 backdrop-blur-xl transition-all hover:bg-teal-500/30 hover:shadow-lg hover:shadow-teal-500/20"
+                        >
+                          <ExternalLink size={14} />
+                          {offer.store_name.toUpperCase()} ({offer.price})
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Backlink requirement for GameBrain */}
+                {isGame && details.link && (
+                  <div className="mb-6 text-xs text-white/40">
+                    Data and assets provided by{' '}
+                    <a
+                      href={details.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-teal-400 hover:text-teal-300 transition-colors"
+                    >
+                      GameBrain.co
+                    </a>
+                  </div>
+                )}
+
+                {/* Watch Now / Links */}
+                {isAnime && details.officialUrl && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-white mb-3">Official Resource</h3>
+                    <a
+                      href={details.officialUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full border border-teal-400/50 bg-teal-500/20 px-5 py-2.5 text-sm font-medium text-teal-300 backdrop-blur-xl transition-all hover:bg-teal-500/30 hover:shadow-lg hover:shadow-teal-500/20"
+                    >
+                      <ExternalLink size={14} />
+                      Visit Website
+                    </a>
+                  </div>
+                )}
+
+                {!isAnime && !isGame && details.services.length > 0 && (
                   <div className="mb-6">
                     <h3 className="text-sm font-semibold text-white mb-3">Watch Now</h3>
                     <div className="flex flex-wrap gap-2">
@@ -215,9 +311,6 @@ export default function MovieDetailModal({ movieId, onClose }: MovieDetailModalP
                         </a>
                       ))}
                     </div>
-                    <p className="text-xs text-white/40 mt-2">
-                      Links open TMDB's watch page with direct platform options
-                    </p>
                   </div>
                 )}
 
@@ -241,27 +334,33 @@ export default function MovieDetailModal({ movieId, onClose }: MovieDetailModalP
             {/* Cast */}
             {details.cast.length > 0 && (
               <div className="mt-8">
-                <h3 className="text-lg font-semibold text-white mb-4">Cast</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">Voice Cast / Actors</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                  {details.cast.map((person) => (
-                    <div key={person.id} className="text-center">
-                      <div className="mb-2 overflow-hidden rounded-lg border border-white/10 bg-white/5">
-                        {person.profilePath ? (
-                          <img
-                            src={`https://image.tmdb.org/t/p/w185${person.profilePath}`}
-                            alt={person.name}
-                            className="w-full h-auto aspect-[2/3] object-cover"
-                          />
-                        ) : (
-                          <div className="w-full aspect-[2/3] bg-white/5 flex items-center justify-center text-white/40 text-xs">
-                            No photo
-                          </div>
-                        )}
+                  {details.cast.map((person) => {
+                    const castProfileUrl = person.profilePath
+                      ? (person.profilePath.startsWith('http') ? person.profilePath : `https://image.tmdb.org/t/p/w185${person.profilePath}`)
+                      : null;
+                    return (
+                      <div key={person.id} className="text-center">
+                        <div className="mb-2 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                          {castProfileUrl ? (
+                            <img
+                              src={castProfileUrl}
+                              alt={person.name}
+                              className="w-full h-auto aspect-[2/3] object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="w-full aspect-[2/3] bg-white/5 flex items-center justify-center text-white/40 text-xs">
+                              No photo
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-white">{person.name}</p>
+                        <p className="text-xs text-white/60">{person.character}</p>
                       </div>
-                      <p className="text-sm font-medium text-white">{person.name}</p>
-                      <p className="text-xs text-white/60">{person.character}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

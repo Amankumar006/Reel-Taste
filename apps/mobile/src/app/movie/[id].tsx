@@ -113,7 +113,7 @@ function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
 }
 
 export default function MovieDetailScreen() {
-  const { id, tag } = useLocalSearchParams<{ id: string; tag: string }>();
+  const { id, tag, type } = useLocalSearchParams<{ id: string; tag: string; type?: string }>();
   const router = useRouter();
   const { prefs, rateMovie } = usePreferences();
   const { toggle: toggleWatchlist, isInWatchlist } = useWatchlist();
@@ -137,8 +137,35 @@ export default function MovieDetailScreen() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['movie-detail', id],
-    queryFn: () => fetchMovieDetails(id),
+    queryKey: ['movie-detail', id, type],
+    queryFn: async () => {
+      const endpoint = type === 'game'
+        ? `${BASE}/api/games/${id}`
+        : type === 'anime'
+        ? `${BASE}/api/anime/${id}`
+        : `${BASE}/api/movies/${id}`;
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error('Failed to load details');
+      const data = await res.json();
+      
+      if (type === 'anime') {
+        return {
+          ...data,
+          overview: data.synopsis || '',
+          voteAverage: data.score ? data.score / 10 : 0,
+          voteCount: data.score ? 1 : 0,
+          tagline: data.type ? `${data.type} · ${data.episodeCount || 0} eps` : null,
+          services: data.officialUrl ? [{ id: 'official', name: 'Official Site' }] : [],
+        };
+      }
+      if (type === 'game') {
+        return {
+          ...data,
+          tagline: data.playtimeText || null,
+        };
+      }
+      return data;
+    },
     staleTime: 10 * 60 * 1000,
   });
 
@@ -158,21 +185,29 @@ export default function MovieDetailScreen() {
     if (movie) toggleWatchlist(movie);
   };
 
+  const backdropUri = movie?.backdropPath
+    ? (movie.backdropPath.startsWith('http') ? movie.backdropPath : `${TMDB_BACKDROP_BASE}${movie.backdropPath}`)
+    : null;
+
+  const posterUri = movie?.posterPath
+    ? (movie.posterPath.startsWith('http') ? movie.posterPath : `${TMDB_IMAGE_BASE}${movie.posterPath}`)
+    : null;
+
   return (
     <View style={{ flex: 1, backgroundColor: '#080f1e' }}>
       <StatusBar style="light" />
 
       {/* Shared element hero */}
       <Transition.View sharedBoundTag={sharedBoundTag} style={{ width: '100%', height: 440 }}>
-        {movie?.backdropPath ? (
+        {backdropUri ? (
           <Image
-            source={{ uri: `${TMDB_BACKDROP_BASE}${movie.backdropPath}` }}
+            source={{ uri: backdropUri }}
             style={{ width: '100%', height: 440 }}
             contentFit="cover"
           />
-        ) : movie?.posterPath ? (
+        ) : posterUri ? (
           <Image
-            source={{ uri: `${TMDB_IMAGE_BASE}${movie.posterPath}` }}
+            source={{ uri: posterUri }}
             style={{ width: '100%', height: 440 }}
             contentFit="cover"
           />
@@ -305,7 +340,7 @@ export default function MovieDetailScreen() {
                   }}
                 >
                   <Image
-                    source={{ uri: `${TMDB_IMAGE_BASE}${movie.posterPath}` }}
+                    source={{ uri: posterUri }}
                     style={{ width: 108, height: 162 }}
                     contentFit="cover"
                   />
@@ -416,6 +451,32 @@ export default function MovieDetailScreen() {
               </View>
             )}
 
+            {/* Platforms (Games only) */}
+            {type === 'game' && movie.platforms?.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+                {movie.platforms.map((p: string) => (
+                  <View
+                    key={p}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: 'rgba(45,212,191,0.2)',
+                      backgroundColor: 'rgba(20,184,166,0.08)',
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                      borderRadius: 100,
+                    }}
+                  >
+                    <Text
+                      style={{ color: '#5eead4', fontSize: 12, fontWeight: '700' }}
+                    >
+                      {p}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+
             {/* Like / Pass */}
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
               <TouchableOpacity
@@ -502,7 +563,7 @@ export default function MovieDetailScreen() {
               {movie.overview}
             </Text>
 
-            {/* Director */}
+            {/* Director / Developer */}
             {movie.director && (
               <View
                 style={{
@@ -540,7 +601,7 @@ export default function MovieDetailScreen() {
                       letterSpacing: 0.5,
                     }}
                   >
-                    DIRECTOR
+                    {type === 'game' ? 'DEVELOPER' : 'DIRECTOR'}
                   </Text>
                   <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 1 }}>
                     {movie.director.name}
@@ -549,8 +610,65 @@ export default function MovieDetailScreen() {
               </View>
             )}
 
+            {/* Where to Buy / Play (Games only) */}
+            {type === 'game' && movie.offers?.length > 0 && (
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 12 }}>
+                  Where to Buy / Play
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {movie.offers.map((offer: any, i: number) => (
+                    <MotiView
+                      key={i}
+                      from={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: 'spring', delay: i * 60 }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => {
+                          haptic('light');
+                          Linking.openURL(offer.url);
+                        }}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 7,
+                          borderWidth: 1.5,
+                          borderColor: 'rgba(45,212,191,0.45)',
+                          backgroundColor: 'rgba(20,184,166,0.12)',
+                          paddingHorizontal: 16,
+                          paddingVertical: 11,
+                          borderRadius: 100,
+                        }}
+                      >
+                        <ExternalLink size={13} color="#5eead4" />
+                        <Text style={{ color: '#5eead4', fontSize: 13, fontWeight: '700' }}>
+                          {offer.store_name.toUpperCase()} ({offer.price})
+                        </Text>
+                      </TouchableOpacity>
+                    </MotiView>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* GameBrain Backlink Badge */}
+            {type === 'game' && movie.link && (
+              <View style={{ marginBottom: 24, padding: 14, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.02)', borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, textAlign: 'center' }}>
+                  Data and media files are provided by{' '}
+                  <Text
+                    onPress={() => Linking.openURL(movie.link)}
+                    style={{ color: '#2dd4bf', fontWeight: '700', textDecorationLine: 'underline' }}
+                  >
+                    GameBrain.co
+                  </Text>
+                </Text>
+              </View>
+            )}
+
             {/* Watch Now */}
-            {movie.services?.length > 0 && (
+            {type !== 'game' && movie.services?.length > 0 && (
               <View style={{ marginBottom: 24 }}>
                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 12 }}>
                   Watch Now
@@ -566,7 +684,8 @@ export default function MovieDetailScreen() {
                       <TouchableOpacity
                         onPress={() => {
                           haptic('light');
-                          Linking.openURL(`https://www.themoviedb.org/movie/${movie.id}/watch`);
+                          const targetUrl = type === 'anime' && movie.officialUrl ? movie.officialUrl : `https://www.themoviedb.org/movie/${movie.id}/watch`;
+                          Linking.openURL(targetUrl);
                         }}
                         style={{
                           flexDirection: 'row',
@@ -619,7 +738,7 @@ export default function MovieDetailScreen() {
                 >
                   <Play size={17} color="#fff" fill="#fff" />
                   <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
-                    Watch Trailer
+                    {type === 'game' ? 'Watch Gameplay' : 'Watch Trailer'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -658,7 +777,7 @@ export default function MovieDetailScreen() {
                       >
                         {person.profilePath ? (
                           <Image
-                            source={{ uri: `${TMDB_CAST_BASE}${person.profilePath}` }}
+                            source={{ uri: person.profilePath.startsWith('http') ? person.profilePath : `${TMDB_CAST_BASE}${person.profilePath}` }}
                             style={{ width: 76, height: 106 }}
                             contentFit="cover"
                             transition={200}

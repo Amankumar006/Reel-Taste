@@ -11,6 +11,8 @@ interface MovieCardProps {
   rating?: Rating;
   matchPercent?: number;
   reasons?: string[];
+  isAnime?: boolean;
+  isGame?: boolean;
   onRate: (movie: any, rating: Rating) => void;
 }
 
@@ -19,6 +21,8 @@ export default function MovieCard({
   rating,
   matchPercent,
   reasons = [],
+  isAnime = false,
+  isGame = false,
   onRate,
 }: MovieCardProps) {
   const [showModal, setShowModal] = useState(false);
@@ -132,7 +136,14 @@ export default function MovieCard({
       </div>
 
       {/* Detail Modal */}
-      {showModal && <MovieDetailModal movieId={movie.id} onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <MovieDetailModal
+          movieId={movie.id}
+          isAnime={isAnime || movie.isAnime}
+          isGame={isGame || movie.isGame}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </>
   );
 }

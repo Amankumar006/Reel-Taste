@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { TMDB_IMAGE_BASE } from '@/app/data/movies';
 
 interface MoviePosterProps {
@@ -10,14 +9,16 @@ interface MoviePosterProps {
 // Shows the real TMDB poster when available; falls back to a typographic gradient.
 export default function MoviePoster({ title, posterPath, className = '' }: MoviePosterProps) {
   if (posterPath) {
+    const src = posterPath.startsWith('http') ? posterPath : `${TMDB_IMAGE_BASE}${posterPath}`;
+    
     return (
       <div className={`relative overflow-hidden bg-gray-900 ${className}`}>
-        <Image
-          src={`${TMDB_IMAGE_BASE}${posterPath}`}
+        <img
+          src={src}
           alt={`${title} poster`}
-          fill
-          className="object-cover"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover w-full h-full animate-fade-in"
+          referrerPolicy="no-referrer"
+          loading="lazy"
         />
       </div>
     );

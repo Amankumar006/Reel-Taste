@@ -8,12 +8,31 @@ export function useWatchlist() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    let active = true;
+
+    const timer = setTimeout(() => {
+      if (active) {
+        console.warn('AsyncStorage useWatchlist timed out, fallback to defaults');
+        setLoaded(true);
+      }
+    }, 1500);
+
     AsyncStorage.getItem(WATCHLIST_KEY)
       .then((raw) => {
+        clearTimeout(timer);
+        if (!active) return;
         if (raw) setWatchlist(JSON.parse(raw));
         setLoaded(true);
       })
-      .catch(() => setLoaded(true));
+      .catch(() => {
+        clearTimeout(timer);
+        if (active) setLoaded(true);
+      });
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   const persist = useCallback((next: Record<string, any>) => {

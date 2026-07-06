@@ -1,4 +1,8 @@
+import { promises as fs } from 'fs';
+import path from 'path';
+
 const TMDB_BASE = 'https://api.themoviedb.org/3';
+const CACHE_DIR = '/tmp/tmdb_cache';
 
 const GENRE_NAME_TO_ID: Record<string, number> = {
   Action: 28,
@@ -29,6 +33,29 @@ const PROVIDER_ID_TO_SERVICE: Record<number, string> = {
   350: 'apple',
 };
 
+async function readFromCache(key: string, maxAgeMs: number): Promise<any | null> {
+  const file = path.join(CACHE_DIR, `${key}.json`);
+  try {
+    const stat = await fs.stat(file);
+    const age = Date.now() - stat.mtimeMs;
+    if (age > maxAgeMs) return null;
+    const content = await fs.readFile(file, 'utf8');
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+async function writeToCache(key: string, data: any): Promise<void> {
+  try {
+    await fs.mkdir(CACHE_DIR, { recursive: true });
+    const file = path.join(CACHE_DIR, `${key}.json`);
+    await fs.writeFile(file, JSON.stringify(data), 'utf8');
+  } catch (err) {
+    console.error('Failed to write to cache:', err);
+  }
+}
+
 function normalizeMovie(movie: any, services: string[]) {
   const genres = ((movie.genre_ids ?? []) as number[])
     .map((id) => GENRE_ID_TO_NAME[id])
@@ -48,14 +75,21 @@ function normalizeMovie(movie: any, services: string[]) {
 }
 
 async function fetchProviders(movieId: number, apiKey: string): Promise<string[]> {
+  const cacheKey = `providers_${movieId}`;
+  const cached = await readFromCache(cacheKey, 30 * 24 * 60 * 60 * 1000); // 30 days
+  if (cached) return cached;
+
   try {
     const res = await fetch(`${TMDB_BASE}/movie/${movieId}/watch/providers?api_key=${apiKey}`);
     if (!res.ok) return [];
     const data = await res.json();
     const flatrate: any[] = data?.results?.US?.flatrate ?? [];
-    return flatrate
+    const services = flatrate
       .map((p) => PROVIDER_ID_TO_SERVICE[p.provider_id as number])
       .filter(Boolean) as string[];
+
+    await writeToCache(cacheKey, services);
+    return services;
   } catch {
     return [];
   }
@@ -70,6 +104,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const genres = searchParams.get('genres')?.split(',').filter(Boolean) ?? [];
   const page = searchParams.get('page') ?? '1';
+
+  // Attempt to read full discover result from cache
+  const discoverCacheKey = `discover_${genres.sort().join('_')}_p${page}`;
+  const cachedDiscover = await readFromCache(discoverCacheKey, 60 * 60 * 1000); // 1 hour
+  if (cachedDiscover) {
+    return Response.json(cachedDiscover);
+  }
 
   const params = new URLSearchParams({
     api_key: apiKey,
@@ -102,9 +143,13 @@ export async function GET(request: Request) {
 
   const movies = rawMovies.map((movie, i) => normalizeMovie(movie, providerResults[i]));
 
-  return Response.json({
+  const responseBody = {
     movies,
     page: data.page,
     totalPages: Math.min(data.total_pages, 10),
-  });
+  };
+
+  await writeToCache(discoverCacheKey, responseBody);
+
+  return Response.json(responseBody);
 }

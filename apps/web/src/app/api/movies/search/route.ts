@@ -43,6 +43,34 @@ function normalizeMovie(movie: any, services: string[]) {
   };
 }
 
+import { promises as fs } from 'fs';
+import path from 'path';
+
+const CACHE_DIR = '/tmp/tmdb_cache';
+
+async function readFromCache(key: string, maxAgeMs: number): Promise<any | null> {
+  const file = path.join(CACHE_DIR, `${key}.json`);
+  try {
+    const stat = await fs.stat(file);
+    const age = Date.now() - stat.mtimeMs;
+    if (age > maxAgeMs) return null;
+    const content = await fs.readFile(file, 'utf8');
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+async function writeToCache(key: string, data: any): Promise<void> {
+  try {
+    await fs.mkdir(CACHE_DIR, { recursive: true });
+    const file = path.join(CACHE_DIR, `${key}.json`);
+    await fs.writeFile(file, JSON.stringify(data), 'utf8');
+  } catch (err) {
+    console.error('Failed to write to cache:', err);
+  }
+}
+
 export async function GET(request: Request) {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
@@ -73,17 +101,24 @@ export async function GET(request: Request) {
   const data = await res.json();
   const rawMovies: any[] = (data.results ?? []).filter((m: any) => m.vote_count > 20);
 
-  // Fetch providers in parallel
+  // Fetch providers in parallel with caching
   const providerResults = await Promise.all(
     rawMovies.map(async (movie) => {
+      const cacheKey = `providers_${movie.id}`;
+      const cached = await readFromCache(cacheKey, 30 * 24 * 60 * 60 * 1000); // 30 days
+      if (cached) return cached;
+
       try {
         const r = await fetch(`${TMDB_BASE}/movie/${movie.id}/watch/providers?api_key=${apiKey}`);
         if (!r.ok) return [];
         const d = await r.json();
         const flatrate: any[] = d?.results?.US?.flatrate ?? [];
-        return flatrate
+        const services = flatrate
           .map((p) => PROVIDER_ID_TO_SERVICE[p.provider_id as number])
           .filter(Boolean) as string[];
+
+        await writeToCache(cacheKey, services);
+        return services;
       } catch {
         return [];
       }
