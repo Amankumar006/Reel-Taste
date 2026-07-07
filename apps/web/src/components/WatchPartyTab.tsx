@@ -55,6 +55,7 @@ export default function WatchPartyTab() {
   const [queue, setQueue] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [swipingLoading, setSwipingLoading] = useState<boolean>(false);
+  const [playTrailers, setPlayTrailers] = useState<boolean>(true);
 
   // Match celebration state
   const [matches, setMatches] = useState<any[]>([]);
@@ -708,11 +709,51 @@ export default function WatchPartyTab() {
               </div>
             ) : (
               /* THE SWIPER CARD WRAPPER */
-              <div className="w-full max-w-md flex flex-col gap-6">
+              <div className="w-full max-w-md flex flex-col gap-4">
+                {/* Trailer Toggle Switch */}
+                <div className="flex items-center gap-2 self-end bg-white/5 border border-white/10 px-3.5 py-2 rounded-full backdrop-blur-xl select-none">
+                  <span className="text-[10px] font-bold text-white/60 tracking-wider uppercase">
+                    Auto-Play Trailers
+                  </span>
+                  <button
+                    onClick={() => setPlayTrailers(!playTrailers)}
+                    className={`w-9 h-5 rounded-full p-0.5 transition-all outline-none cursor-pointer ${
+                      playTrailers ? 'bg-teal-500' : 'bg-white/10'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full bg-white shadow-md transition-all ${
+                        playTrailers ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
                 {/* Active Card Body */}
                 <div className="relative aspect-[3/4] rounded-3xl overflow-hidden border border-white/10 bg-[#0a1628] shadow-2xl flex flex-col justify-end p-6 group">
-                  {/* YouTube Trailer Cinematic Backdrop */}
-                  {activeCard.trailer?.key ? (
+                  {/* Card Background Backdrop */}
+                  {!playTrailers || !activeCard.trailer?.key ? (
+                    (activeCard.backdropPath || activeCard.posterPath) && (
+                      <div className="absolute inset-0 z-0">
+                        <img
+                          src={
+                            activeCard.backdropPath
+                              ? (activeCard.backdropPath.startsWith('http')
+                                  ? activeCard.backdropPath
+                                  : `https://image.tmdb.org/t/p/w1280${activeCard.backdropPath}`)
+                              : (activeCard.posterPath.startsWith('http')
+                                  ? activeCard.posterPath
+                                  : `${TMDB_IMAGE_BASE}${activeCard.posterPath}`)
+                          }
+                          alt={activeCard.title}
+                          className="w-full h-full object-cover opacity-30"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/60 to-transparent" />
+                      </div>
+                    )
+                  ) : (
+                    /* Play YouTube Trailer Backdrop */
                     <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
                       <iframe
                         src={`https://www.youtube.com/embed/${activeCard.trailer.key}?autoplay=1&mute=1&controls=0&loop=1&playlist=${activeCard.trailer.key}&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&enablejsapi=1`}
@@ -722,22 +763,7 @@ export default function WatchPartyTab() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/60 to-transparent" />
                     </div>
-                  ) : activeCard.backdropPath ? (
-                    /* Fallback Backdrop */
-                    <div className="absolute inset-0 z-0">
-                      <img
-                        src={
-                          activeCard.backdropPath.startsWith('http')
-                            ? activeCard.backdropPath
-                            : `https://image.tmdb.org/t/p/w1280${activeCard.backdropPath}`
-                        }
-                        alt={activeCard.title}
-                        className="w-full h-full object-cover opacity-30"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/60 to-transparent" />
-                    </div>
-                  ) : null}
+                  )}
 
                   {/* Gradient shadow overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10" />
