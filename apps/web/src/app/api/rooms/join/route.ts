@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import sql from '../../utils/sql';
+import db from '../../utils/db';
 import { ensureDbTables } from '../../utils/init_db';
 
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbTables();
+    if (db.isPg) {
+      await ensureDbTables();
+    }
 
     const body = await request.json();
     const { userId, code } = body;
@@ -16,23 +18,15 @@ export async function POST(request: NextRequest) {
     const roomCode = String(code).trim().toUpperCase();
 
     // Check if room exists
-    const rooms = await sql`
-      SELECT * FROM watch_rooms WHERE code = ${roomCode}
-    `;
+    const room = await db.getRoom(roomCode);
 
-    if (rooms.length === 0) {
+    if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    const room = rooms[0];
-
     // If guest joining, update member_id
     if (room.host_id !== userId && room.member_id !== userId) {
-      await sql`
-        UPDATE watch_rooms
-        SET member_id = ${userId}
-        WHERE code = ${roomCode}
-      `;
+      await db.joinRoom(roomCode, userId);
       room.member_id = userId;
     }
 

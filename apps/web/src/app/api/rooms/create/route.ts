@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import sql from '../../utils/sql';
+import db from '../../utils/db';
 import { ensureDbTables } from '../../utils/init_db';
 
 function generateRoomCode(): string {
@@ -13,7 +13,9 @@ function generateRoomCode(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbTables();
+    if (db.isPg) {
+      await ensureDbTables();
+    }
 
     const body = await request.json();
     const { userId, mediaType, genres } = body;
@@ -26,8 +28,8 @@ export async function POST(request: NextRequest) {
     let exists = true;
     let attempts = 0;
     while (exists && attempts < 10) {
-      const rows = await sql`SELECT code FROM watch_rooms WHERE code = ${code}`;
-      if (rows.length === 0) {
+      const room = await db.getRoom(code);
+      if (!room) {
         exists = false;
       } else {
         code = generateRoomCode();
@@ -38,10 +40,7 @@ export async function POST(request: NextRequest) {
     const type = mediaType || 'movies';
     const genreList = genres || [];
 
-    await sql`
-      INSERT INTO watch_rooms (code, host_id, media_type, genres)
-      VALUES (${code}, ${userId}, ${type}, ${genreList})
-    `;
+    await db.createRoom(code, userId, type, genreList);
 
     return NextResponse.json({
       code,

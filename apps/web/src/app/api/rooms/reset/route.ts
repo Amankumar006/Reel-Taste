@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import sql from '../../utils/sql';
+import db from '../../utils/db';
 import { ensureDbTables } from '../../utils/init_db';
 
 export async function POST(request: NextRequest) {
   try {
-    await ensureDbTables();
+    if (db.isPg) {
+      await ensureDbTables();
+    }
 
     const body = await request.json();
     const { code } = body;
@@ -16,22 +18,14 @@ export async function POST(request: NextRequest) {
     const roomCode = String(code).trim().toUpperCase();
 
     // Verify room exists
-    const rooms = await sql`
-      SELECT code FROM watch_rooms WHERE code = ${roomCode}
-    `;
+    const room = await db.getRoom(roomCode);
 
-    if (rooms.length === 0) {
+    if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    // Delete swipes and matches
-    await sql`
-      DELETE FROM room_swipes WHERE room_code = ${roomCode}
-    `;
-
-    await sql`
-      DELETE FROM room_matches WHERE room_code = ${roomCode}
-    `;
+    // Reset room votes/matches
+    await db.resetRoom(roomCode);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

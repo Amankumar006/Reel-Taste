@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import sql from '../../utils/sql';
+import db from '../../utils/db';
 import { ensureDbTables } from '../../utils/init_db';
 
 export async function GET(request: NextRequest) {
   try {
-    await ensureDbTables();
+    if (db.isPg) {
+      await ensureDbTables();
+    }
 
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
@@ -16,25 +18,17 @@ export async function GET(request: NextRequest) {
     const roomCode = String(code).trim().toUpperCase();
 
     // Fetch room
-    const rooms = await sql`
-      SELECT * FROM watch_rooms WHERE code = ${roomCode}
-    `;
+    const room = await db.getRoom(roomCode);
 
-    if (rooms.length === 0) {
+    if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    const room = rooms[0];
-
     // Fetch swipes count
-    const swipes = await sql`
-      SELECT COUNT(*)::int as count FROM room_swipes WHERE room_code = ${roomCode}
-    `;
+    const swipesCount = await db.getSwipesCount(roomCode);
 
     // Fetch matches
-    const matches = await sql`
-      SELECT * FROM room_matches WHERE room_code = ${roomCode} ORDER BY created_at DESC
-    `;
+    const matches = await db.getMatches(roomCode);
 
     return NextResponse.json({
       code: room.code,
@@ -42,7 +36,7 @@ export async function GET(request: NextRequest) {
       memberId: room.member_id,
       mediaType: room.media_type,
       genres: room.genres,
-      swipesCount: swipes[0]?.count || 0,
+      swipesCount,
       matches: matches.map((m: any) => ({
         mediaId: m.media_id,
         title: m.title,
