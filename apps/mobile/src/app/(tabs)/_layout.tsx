@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Animated, View, Text, TouchableOpacity } from 'react-native';
-import { Compass, Bookmark, Heart, Settings2 } from 'lucide-react-native';
+import { Compass, Bookmark, Heart, Settings2, Users } from 'lucide-react-native';
 import { usePreferences } from '@/utils/usePreferences';
 import { useWatchlist } from '@/utils/useWatchlist';
 
@@ -113,6 +113,19 @@ export default function TabLayout() {
               focused={props.accessibilityState?.selected ?? false}
               iconFn={(c) => <Compass size={24} color={c} />}
               label="Discover"
+              onPress={props.onPress ?? undefined}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="watchparty"
+        options={{
+          tabBarButton: (props) => (
+            <AnimatedTabIcon
+              focused={props.accessibilityState?.selected ?? false}
+              iconFn={(c) => <Users size={24} color={c} />}
+              label="Party"
               onPress={props.onPress ?? undefined}
             />
           ),
