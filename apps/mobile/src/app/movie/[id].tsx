@@ -36,6 +36,9 @@ import { usePreferences } from '@/utils/usePreferences';
 import { useWatchlist } from '@/utils/useWatchlist';
 import { TMDB_IMAGE_BASE, TMDB_BACKDROP_BASE, TMDB_CAST_BASE } from '@/utils/constants';
 
+const TransitionView = (Transition as any)?.View || View;
+
+
 const BASE = process.env.EXPO_PUBLIC_BASE_URL ?? '';
 
 async function fetchMovieDetails(id: string) {
@@ -198,7 +201,7 @@ export default function MovieDetailScreen() {
       <StatusBar style="light" />
 
       {/* Shared element hero */}
-      <Transition.View sharedBoundTag={sharedBoundTag} style={{ width: '100%', height: 440 }}>
+      <TransitionView sharedBoundTag={sharedBoundTag} style={{ width: '100%', height: 440 }}>
         {backdropUri ? (
           <Image
             source={{ uri: backdropUri }}
@@ -218,7 +221,7 @@ export default function MovieDetailScreen() {
           colors={['rgba(8,15,30,0)', 'rgba(8,15,30,0.6)', 'rgba(8,15,30,1)']}
           style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 280 }}
         />
-      </Transition.View>
+      </TransitionView>
 
       {/* Back button + Watchlist button */}
       {showUI && (

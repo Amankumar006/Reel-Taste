@@ -22,6 +22,9 @@ import Transition from 'react-native-screen-transitions';
 import { usePreferences } from '@/utils/usePreferences';
 import { TMDB_IMAGE_BASE } from '@/utils/constants';
 
+const TransitionPressable = (Transition as any)?.Pressable || TouchableOpacity;
+
+
 type Filter = 'all' | 'liked' | 'passed';
 type SortBy = 'recent' | 'az';
 type ViewMode = 'list' | 'grid';
@@ -379,7 +382,7 @@ export default function RatedScreen() {
                     transition={{ type: 'spring', damping: 16, delay: Math.min(index * 55, 300) }}
                     style={{ flex: 1 }}
                   >
-                    <Transition.Pressable
+                    <TransitionPressable
                       sharedBoundTag={`image-${movie.id}`}
                       onPress={() => goToMovie(movie)}
                       style={{ borderRadius: 16, overflow: 'hidden' }}
@@ -463,7 +466,7 @@ export default function RatedScreen() {
                           )}
                         </View>
                       </View>
-                    </Transition.Pressable>
+                    </TransitionPressable>
                   </MotiView>
                 )
               : ({ item: { movie, rating }, index }) => (
@@ -490,7 +493,7 @@ export default function RatedScreen() {
                         backgroundColor: rating === 'up' ? '#2dd4bf' : '#f87171',
                       }}
                     />
-                    <Transition.Pressable
+                    <TransitionPressable
                       sharedBoundTag={`image-${movie.id}`}
                       onPress={() => goToMovie(movie)}
                     >
@@ -515,7 +518,7 @@ export default function RatedScreen() {
                           </View>
                         )}
                       </View>
-                    </Transition.Pressable>
+                    </TransitionPressable>
                     <View style={{ flex: 1, padding: 12 }}>
                       <Text
                         style={{

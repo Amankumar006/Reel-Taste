@@ -14,6 +14,9 @@ import Transition from 'react-native-screen-transitions';
 import { useWatchlist } from '@/utils/useWatchlist';
 import { TMDB_IMAGE_BASE } from '@/utils/constants';
 
+const TransitionPressable = (Transition as any)?.Pressable || TouchableOpacity;
+
+
 type ViewMode = 'list' | 'grid';
 
 function haptic() {
@@ -187,7 +190,7 @@ export default function WatchlistScreen() {
                   }}
                 >
                   <View style={{ width: 3, alignSelf: 'stretch', backgroundColor: '#2dd4bf' }} />
-                  <Transition.Pressable
+                  <TransitionPressable
                     sharedBoundTag={`image-${movie.id}`}
                     onPress={() => goToMovie(movie)}
                   >
@@ -212,7 +215,7 @@ export default function WatchlistScreen() {
                         </View>
                       )}
                     </View>
-                  </Transition.Pressable>
+                  </TransitionPressable>
                   <View style={{ flex: 1, padding: 12 }}>
                     <Text
                       style={{
@@ -320,7 +323,7 @@ export default function WatchlistScreen() {
                   transition={{ type: 'spring', damping: 16, delay: Math.min(index * 60, 350) }}
                   style={{ flex: 1 }}
                 >
-                  <Transition.Pressable
+                  <TransitionPressable
                     sharedBoundTag={`image-${movie.id}`}
                     onPress={() => goToMovie(movie)}
                     style={{ borderRadius: 16, overflow: 'hidden' }}
@@ -385,7 +388,7 @@ export default function WatchlistScreen() {
                         )}
                       </View>
                     </View>
-                  </Transition.Pressable>
+                  </TransitionPressable>
                 </MotiView>
               )}
             />

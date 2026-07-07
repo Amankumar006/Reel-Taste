@@ -43,6 +43,10 @@ import { TMDB_IMAGE_BASE, TMDB_BACKDROP_BASE } from '@/utils/constants';
 const BASE = process.env.EXPO_PUBLIC_BASE_URL ?? '';
 const { width: SW, height: SH } = Dimensions.get('window');
 
+// Safe fallback for Transition.Pressable if the native transitions module is not present/supported in Expo Go
+const TransitionPressable = (Transition as any)?.Pressable || TouchableOpacity;
+
+
 async function fetchDiscoverPage({ pageParam, genres }: { pageParam: number; genres: string[] }) {
   const params = new URLSearchParams({ page: String(pageParam) });
   if (genres.length > 0) params.set('genres', genres.join(','));
@@ -115,7 +119,7 @@ function HeroCarousel({
   return (
     <View style={{ marginHorizontal: 16, marginBottom: 8 }}>
       <Animated.View style={{ opacity: fadeAnim }}>
-        <Transition.Pressable sharedBoundTag={`image-${hero.id}`} onPress={() => onPress(hero)}>
+        <TransitionPressable sharedBoundTag={`image-${hero.id}`} onPress={() => onPress(hero)}>
           <View style={{ height: 370, borderRadius: 24, overflow: 'hidden' }}>
             {hero.backdropPath ? (
               <Image
@@ -275,7 +279,7 @@ function HeroCarousel({
               </View>
             </View>
           </View>
-        </Transition.Pressable>
+        </TransitionPressable>
       </Animated.View>
 
       {/* Dot indicators */}
@@ -738,7 +742,9 @@ type ViewMode = 'grid' | 'swipe';
 export default function DiscoverScreen() {
   const router = useRouter();
   const { prefs, loaded, rateMovie } = usePreferences();
+  console.log("MOBILE_DEBUG: DiscoverScreen render", { loaded, prefsKeysCount: Object.keys(prefs || {}).length, prefs });
   const insets = useSafeAreaInsets();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -921,6 +927,8 @@ export default function DiscoverScreen() {
   }
 
   const displayMovies = isSearching || mediaCategory === 'anime' || mediaCategory === 'games' ? activeMovies : activeMovies.slice(1);
+
+
 
   const renderHeader = () => (
     <View style={{ paddingTop: 12 }}>
@@ -1354,7 +1362,7 @@ export default function DiscoverScreen() {
                 transition={{ type: 'spring', damping: 18, delay: Math.min(index * 55, 380) }}
                 style={{ flex: 1, marginBottom: 8 }}
               >
-                <Transition.Pressable
+                <TransitionPressable
                   sharedBoundTag={`image-${movie.id}`}
                   onPress={() => handleMoviePress(movie)}
                   style={{ borderRadius: 16, overflow: 'hidden' }}
@@ -1446,7 +1454,7 @@ export default function DiscoverScreen() {
                       )}
                     </View>
                   </View>
-                </Transition.Pressable>
+                </TransitionPressable>
                 <View style={{ flexDirection: 'row', gap: 5, marginTop: 6 }}>
                   <TouchableOpacity
                     onPress={() => handleRate(movie, 'up')}
