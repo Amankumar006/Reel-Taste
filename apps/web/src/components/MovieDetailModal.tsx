@@ -162,14 +162,28 @@ export default function MovieDetailModal({ movieId, isAnime = false, isGame = fa
           
           {/* Backdrop header */}
           {backdropUrl && (
-            <div className="relative h-80">
-              <img
-                src={backdropUrl}
-                alt={details.title}
-                className="h-full w-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/60 to-transparent" />
+            <div className="relative h-80 overflow-hidden">
+              {details.trailer?.key ? (
+                <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${details.trailer.key}?autoplay=1&mute=1&controls=0&loop=1&playlist=${details.trailer.key}&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&enablejsapi=1`}
+                    className="absolute top-1/2 left-1/2 w-[115%] h-[115%] -translate-x-1/2 -translate-y-1/2 border-0 opacity-50 object-cover scale-[1.35]"
+                    allow="autoplay; encrypted-media"
+                    title="Cinematic trailer backdrop"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/60 to-transparent" />
+                </div>
+              ) : (
+                <>
+                  <img
+                    src={backdropUrl}
+                    alt={details.title}
+                    className="h-full w-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/60 to-transparent" />
+                </>
+              )}
             </div>
           )}
 

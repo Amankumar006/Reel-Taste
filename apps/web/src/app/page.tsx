@@ -21,8 +21,9 @@ import { getRecommendations } from '@/utils/recommend';
 import Onboarding from '@/components/Onboarding';
 import MovieCard from '@/components/MovieCard';
 import MovieDetailModal from '@/components/MovieDetailModal';
+import WatchPartyTab from '@/components/WatchPartyTab';
 
-type Tab = 'discover' | 'rated' | 'preferences';
+type Tab = 'discover' | 'rated' | 'preferences' | 'party';
 
 async function fetchDiscoverPage({ pageParam, genres }: { pageParam: number; genres: string[] }) {
   const params = new URLSearchParams({ page: String(pageParam) });
@@ -656,6 +657,13 @@ export default function HomePage() {
             </div>
           </section>
         )}
+
+        {/* ── WATCH PARTY ── */}
+        {tab === 'party' && (
+          <section>
+            <WatchPartyTab />
+          </section>
+        )}
       </main>
 
       {/* Floating glassmorphism tab bar */}
@@ -684,6 +692,18 @@ export default function HomePage() {
           >
             <Heart size={16} />
             Rated
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('party')}
+            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all ${
+              tab === 'party'
+                ? 'bg-white/20 text-white shadow-lg'
+                : 'text-white/60 hover:text-white/80'
+            }`}
+          >
+            <Sparkles size={16} />
+            Watch Party
           </button>
           <button
             type="button"
