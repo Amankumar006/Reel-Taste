@@ -79,6 +79,7 @@ export default function WatchPartyTab() {
   }, []);
 
   const matchesRef = useRef<any[]>([]);
+  const loadedRoomParamsRef = useRef<string>('');
 
   // Update matchesRef whenever matches changes
   useEffect(() => {
@@ -136,9 +137,15 @@ export default function WatchPartyTab() {
 
   // Load cards queue based on room settings
   useEffect(() => {
-    if (!room) {
+    if (!room || !roomCode) {
       setQueue([]);
       setCurrentIndex(0);
+      loadedRoomParamsRef.current = '';
+      return;
+    }
+
+    const currentParams = `${roomCode}_${room.mediaType}_${(room.genres || []).join(',')}`;
+    if (loadedRoomParamsRef.current === currentParams) {
       return;
     }
 
@@ -201,6 +208,7 @@ export default function WatchPartyTab() {
         if (active) {
           setQueue(items.filter(Boolean));
           setCurrentIndex(0);
+          loadedRoomParamsRef.current = currentParams;
         }
       } catch (err) {
         console.error('Queue loading error:', err);
@@ -213,7 +221,7 @@ export default function WatchPartyTab() {
     return () => {
       active = false;
     };
-  }, [room]);
+  }, [room, roomCode]);
 
   // Create Room
   const handleCreateRoom = async () => {
