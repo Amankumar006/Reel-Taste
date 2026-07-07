@@ -765,7 +765,7 @@ export default function DiscoverScreen() {
   const router = useRouter();
   const { prefs, loaded, rateMovie } = usePreferences();
   console.log("MOBILE_DEBUG: DiscoverScreen render", { loaded, prefsKeysCount: Object.keys(prefs || {}).length, prefs });
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets() || { top: 0, bottom: 0, left: 0, right: 0 };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -1359,6 +1359,7 @@ export default function DiscoverScreen() {
         <SwipeStack movies={recommendations} onRate={handleRate} onDetails={handleMoviePress} />
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={displayMovies}
           keyExtractor={(item) => String(item.id)}
           numColumns={2}

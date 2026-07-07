@@ -18,6 +18,7 @@ import { Stack, useGlobalSearchParams } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -62,24 +63,26 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen
-              name="(tabs)"
-            />
-            <Stack.Screen
-              name="onboarding"
-              options={{ animation: 'slide_from_bottom' }}
-            />
-            <Stack.Screen
-              name="movie/[id]"
-              options={{ animation: 'slide_from_bottom' }}
-            />
-          </Stack>
-          <AuthModal />
-        </GestureHandlerRootView>
-      </QueryClientProvider>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen
+                name="(tabs)"
+              />
+              <Stack.Screen
+                name="onboarding"
+                options={{ animation: 'slide_from_bottom' }}
+              />
+              <Stack.Screen
+                name="movie/[id]"
+                options={{ animation: 'slide_from_bottom' }}
+              />
+            </Stack>
+            <AuthModal />
+          </GestureHandlerRootView>
+        </QueryClientProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }
