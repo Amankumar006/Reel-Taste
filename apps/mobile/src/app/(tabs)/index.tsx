@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MotiView, AnimatePresence } from 'moti';
+const MotiView = (props: any) => <View {...props} />;
+const AnimatePresence = ({ children }: any) => <>{children}</>;
 import * as Haptics from 'expo-haptics';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
