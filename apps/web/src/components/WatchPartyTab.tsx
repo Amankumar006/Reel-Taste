@@ -38,6 +38,92 @@ const MOVIE_GENRES = [
   { id: '53', name: 'Thriller' },
 ];
 
+function CardBackdrop({
+  movieId,
+  playTrailers,
+  backdropPath,
+  posterPath,
+  title,
+  mediaType,
+}: {
+  movieId: number | string;
+  playTrailers: boolean;
+  backdropPath: string | null;
+  posterPath: string | null;
+  title: string;
+  mediaType: string;
+}) {
+  const [trailerKey, setTrailerKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!playTrailers || mediaType !== 'movies') {
+      setTrailerKey(null);
+      return;
+    }
+
+    let active = true;
+    async function fetchTrailer() {
+      try {
+        const res = await fetch(`/api/movies/${movieId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active) {
+          setTrailerKey(data.trailer?.key || null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch trailer key:', err);
+      }
+    }
+
+    void fetchTrailer();
+    return () => {
+      active = false;
+    };
+  }, [movieId, playTrailers, mediaType]);
+
+  const showStatic = !playTrailers || !trailerKey;
+
+  const staticUrl = backdropPath
+    ? (backdropPath.startsWith('http')
+        ? backdropPath
+        : `https://image.tmdb.org/t/p/w1280${backdropPath}`)
+    : (posterPath && posterPath.startsWith('http')
+        ? posterPath
+        : posterPath
+        ? `${TMDB_IMAGE_BASE}${posterPath}`
+        : null);
+
+  return (
+    <div className="absolute inset-0 z-0 w-full h-full overflow-hidden">
+      {showStatic ? (
+        staticUrl && (
+          <>
+            <img
+              src={staticUrl}
+              alt={title}
+              className="w-full h-full object-cover opacity-90"
+              referrerPolicy="no-referrer"
+            />
+            {/* Transparent blocking layer */}
+            <div className="absolute inset-0 bg-transparent z-10" />
+          </>
+        )
+      ) : (
+        <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
+          <iframe
+            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${trailerKey}&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&enablejsapi=1`}
+            className="absolute top-1/2 left-1/2 w-[130%] h-[130%] -translate-x-1/2 -translate-y-1/2 border-0 opacity-100 scale-[1.35] pointer-events-none"
+            allow="autoplay; encrypted-media"
+            title="Card cinematic trailer backdrop"
+          />
+          {/* Clicks and touches blocked by this layer to keep the feed playing clean like a Reel */}
+          <div className="absolute inset-0 bg-transparent pointer-events-auto z-10" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WatchPartyTab() {
   const [userId, setUserId] = useState<string>('');
   const [inputCode, setInputCode] = useState<string>('');
@@ -731,42 +817,18 @@ export default function WatchPartyTab() {
 
                 {/* Active Card Body */}
                 <div className="relative aspect-[3/4] rounded-3xl overflow-hidden border border-white/10 bg-[#0a1628] shadow-2xl flex flex-col justify-end p-6 group">
-                  {/* Card Background Backdrop */}
-                  {!playTrailers || !activeCard.trailer?.key ? (
-                    (activeCard.backdropPath || activeCard.posterPath) && (
-                      <div className="absolute inset-0 z-0">
-                        <img
-                          src={
-                            activeCard.backdropPath
-                              ? (activeCard.backdropPath.startsWith('http')
-                                  ? activeCard.backdropPath
-                                  : `https://image.tmdb.org/t/p/w1280${activeCard.backdropPath}`)
-                              : (activeCard.posterPath.startsWith('http')
-                                  ? activeCard.posterPath
-                                  : `${TMDB_IMAGE_BASE}${activeCard.posterPath}`)
-                          }
-                          alt={activeCard.title}
-                          className="w-full h-full object-cover opacity-30"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/60 to-transparent" />
-                      </div>
-                    )
-                  ) : (
-                    /* Play YouTube Trailer Backdrop */
-                    <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                      <iframe
-                        src={`https://www.youtube.com/embed/${activeCard.trailer.key}?autoplay=1&mute=1&controls=0&loop=1&playlist=${activeCard.trailer.key}&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&enablejsapi=1`}
-                        className="absolute top-1/2 left-1/2 w-[125%] h-[125%] -translate-x-1/2 -translate-y-1/2 border-0 opacity-40 scale-[1.35]"
-                        allow="autoplay; encrypted-media"
-                        title="Card cinematic trailer backdrop"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/60 to-transparent" />
-                    </div>
-                  )}
+                  {/* Card Background Backdrop (Loaded On-Demand) */}
+                  <CardBackdrop
+                    movieId={activeCard.id}
+                    playTrailers={playTrailers}
+                    backdropPath={activeCard.backdropPath}
+                    posterPath={activeCard.posterPath}
+                    title={activeCard.title}
+                    mediaType={room?.mediaType || 'movies'}
+                  />
 
-                  {/* Gradient shadow overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10" />
+                  {/* Rich gradient shadow overlay for perfect readability (like TikTok/Reels) */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10 pointer-events-none" />
 
                   {/* Top-Right Score Badge */}
                   {activeCard.score ? (
