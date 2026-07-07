@@ -744,13 +744,6 @@ export default function DiscoverScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const isSearching = searchQuery.trim().length >= 2;
 
-  useEffect(() => {
-    if (loaded && !prefs.onboarded) {
-      // Defer navigation so TransitionStack navigator is fully mounted first
-      const t = setTimeout(() => router.replace('/onboarding' as any), 300);
-      return () => clearTimeout(t);
-    }
-  }, [loaded, prefs.onboarded, router]);
 
 
   const [mediaCategory, setMediaCategory] = useState<'movies' | 'anime' | 'games'>('movies');
@@ -771,14 +764,14 @@ export default function DiscoverScreen() {
     initialPageParam: 1,
     getNextPageParam: (last) =>
       last.page < Math.min(last.totalPages, 8) ? last.page + 1 : undefined,
-    enabled: prefs.onboarded && mediaCategory === 'movies',
+    enabled: mediaCategory === 'movies',
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: searchData, isLoading: searchLoading } = useQuery({
     queryKey: ['search', searchQuery],
     queryFn: () => fetchSearch(searchQuery),
-    enabled: prefs.onboarded && isSearching && mediaCategory === 'movies',
+    enabled: isSearching && mediaCategory === 'movies',
     staleTime: 60 * 1000,
   });
 
@@ -809,7 +802,7 @@ export default function DiscoverScreen() {
       );
       return results.filter(Boolean);
     },
-    enabled: prefs.onboarded && mediaCategory === 'anime',
+    enabled: mediaCategory === 'anime',
     staleTime: 10 * 60 * 1000,
   });
 
@@ -846,7 +839,7 @@ export default function DiscoverScreen() {
       );
       return results.filter(Boolean);
     },
-    enabled: prefs.onboarded && mediaCategory === 'games' && !isSearching,
+    enabled: mediaCategory === 'games' && !isSearching,
     staleTime: 10 * 60 * 1000,
   });
 
@@ -863,7 +856,7 @@ export default function DiscoverScreen() {
         reasons: ['Search Result'],
       }));
     },
-    enabled: prefs.onboarded && isSearching && mediaCategory === 'games',
+    enabled: isSearching && mediaCategory === 'games',
     staleTime: 60 * 1000,
   });
 

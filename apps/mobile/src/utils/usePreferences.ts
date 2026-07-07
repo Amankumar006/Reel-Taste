@@ -31,7 +31,8 @@ async function loadPrefs(): Promise<Preferences> {
   try {
     const raw = await AsyncStorage.getItem(PREFS_KEY);
     if (!raw) return DEFAULT_PREFS;
-    return { ...DEFAULT_PREFS, ...JSON.parse(raw) };
+    // Always force onboarded:true — onboarding is done via Prefs tab now
+    return { ...DEFAULT_PREFS, ...JSON.parse(raw), onboarded: true };
   } catch {
     return DEFAULT_PREFS;
   }
