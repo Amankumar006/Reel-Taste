@@ -17,6 +17,8 @@ import {
   Film,
   Tv,
   Gamepad2,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { TMDB_IMAGE_BASE } from '@/app/data/movies';
 
@@ -45,6 +47,7 @@ function CardBackdrop({
   posterPath,
   title,
   mediaType,
+  muted,
 }: {
   movieId: number | string;
   playTrailers: boolean;
@@ -52,6 +55,7 @@ function CardBackdrop({
   posterPath: string | null;
   title: string;
   mediaType: string;
+  muted: boolean;
 }) {
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
 
@@ -111,7 +115,7 @@ function CardBackdrop({
       ) : (
         <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
           <iframe
-            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${trailerKey}&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&enablejsapi=1`}
+            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${trailerKey}&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&enablejsapi=1`}
             className="absolute top-1/2 left-1/2 w-[130%] h-[130%] -translate-x-1/2 -translate-y-1/2 border-0 opacity-100 scale-[1.35] pointer-events-none"
             allow="autoplay; encrypted-media"
             title="Card cinematic trailer backdrop"
@@ -142,12 +146,140 @@ export default function WatchPartyTab() {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [swipingLoading, setSwipingLoading] = useState<boolean>(false);
   const [playTrailers, setPlayTrailers] = useState<boolean>(true);
+  const [muted, setMuted] = useState<boolean>(true);
+  const [showMobileDetails, setShowMobileDetails] = useState<boolean>(false);
 
   // Match celebration state
   const [matches, setMatches] = useState<any[]>([]);
   const [showMatchModal, setShowMatchModal] = useState<boolean>(false);
   const [lastMatch, setLastMatch] = useState<any>(null);
   const [copied, setCopied] = useState<boolean>(false);
+
+  const renderLobbySidebarContent = () => (
+    <>
+      <div>
+        <span className="text-[10px] font-bold text-teal-400 tracking-widest uppercase bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-full">
+          Active Room
+        </span>
+        <div className="flex items-center gap-3 mt-4">
+          <h2 className="text-3xl font-black text-white tracking-wider">{roomCode}</h2>
+          <button
+            onClick={copyInvite}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all cursor-pointer"
+            title="Copy Invite Code"
+          >
+            {copied ? <Check size={16} className="text-teal-400" /> : <Copy size={16} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Players connectivity indicators */}
+      <div className="border-t border-white/10 pt-5">
+        <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
+          Room Members
+        </h3>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+            <span className="text-sm font-semibold text-white/80">
+              Host ({room?.hostId === userId ? 'You' : 'Friend'})
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {room?.memberId ? (
+              <>
+                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+                <span className="text-sm font-semibold text-white/80">
+                  Guest ({room?.memberId === userId ? 'You' : 'Friend'})
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
+                <span className="text-sm text-white/40 italic">Waiting for guest to join…</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Selected Preferences Summary */}
+      <div className="border-t border-white/10 pt-5">
+        <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">
+          Room Category
+        </h3>
+        <p className="text-sm font-bold text-white capitalize">{room?.mediaType}</p>
+        {room?.genres && room.genres.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {room.genres.map((gid: string) => {
+              const matched = MOVIE_GENRES.find((g) => g.id === gid);
+              return (
+                <span
+                  key={gid}
+                  className="px-2 py-0.5 rounded-md border border-white/5 bg-white/5 text-[10px] text-white/50"
+                >
+                  {matched?.name || gid}
+                </span>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Room Matches List */}
+      <div className="border-t border-white/10 pt-5">
+        <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
+          Matches ({matches.length})
+        </h3>
+        {matches.length === 0 ? (
+          <p className="text-xs text-white/40 italic">No matches in this session yet.</p>
+        ) : (
+          <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+            {matches.map((m: any) => (
+              <div
+                key={m.mediaId}
+                className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5"
+              >
+                {m.posterPath && (
+                  <img
+                    src={
+                      m.posterPath.startsWith('http')
+                        ? m.posterPath
+                        : `${TMDB_IMAGE_BASE}${m.posterPath}`
+                    }
+                    alt={m.title}
+                    className="w-10 h-14 rounded-lg object-cover"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white truncate">{m.title}</p>
+                  <span className="text-[10px] text-teal-400 font-semibold flex items-center gap-1">
+                    <Flame size={10} className="fill-teal-400" /> Matched!
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Lobby actions */}
+      <div className="border-t border-white/10 pt-5 flex gap-2">
+        <button
+          onClick={handleResetSession}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/10 bg-transparent text-white/60 hover:text-white hover:border-white/20 transition-all text-xs font-semibold cursor-pointer"
+        >
+          <RefreshCw size={12} /> Reset Lobby
+        </button>
+        <button
+          onClick={handleLeave}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-950/20 border border-red-500/20 text-red-400 hover:bg-red-950/40 transition-all text-xs font-semibold cursor-pointer"
+        >
+          <LogOut size={12} /> Leave Room
+        </button>
+      </div>
+    </>
+  );
 
   // Generate persistent anonymous userId on mount
   useEffect(() => {
@@ -638,129 +770,29 @@ export default function WatchPartyTab() {
       ) : (
         /* ACTIVE PARTY LOBBY SCREEN */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Controls & Sync Side Bar */}
-          <div className="lg:col-span-1 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl h-fit flex flex-col gap-6">
-            <div>
-              <span className="text-[10px] font-bold text-teal-400 tracking-widest uppercase bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 rounded-full">
-                Active Room
-              </span>
-              <div className="flex items-center gap-3 mt-4">
-                <h2 className="text-3xl font-black text-white tracking-wider">{roomCode}</h2>
+          {/* Controls & Sync Side Bar (Hidden on Mobile, visible on Desktop) */}
+          <div className="hidden lg:flex lg:col-span-1 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl h-fit flex-col gap-6">
+            {renderLobbySidebarContent()}
+          </div>
+
+          {/* Co-Swipe Card deck swiping section */}
+          <div className="lg:col-span-2 flex flex-col items-center w-full">
+            {/* Mobile Header Bar */}
+            <div className="flex lg:hidden items-center justify-between bg-white/5 border border-white/10 px-4 py-2.5 rounded-2xl w-full max-w-md mb-4 backdrop-blur-xl select-none">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${room?.memberId ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                <span className="text-xs font-black text-white tracking-widest">PARTY: {roomCode}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
                 <button
-                  onClick={copyInvite}
-                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all"
-                  title="Copy Invite Code"
+                  onClick={() => setShowMobileDetails(true)}
+                  className="text-[10px] bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 rounded-xl text-teal-400 font-bold hover:bg-teal-500/20 transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  {copied ? <Check size={16} className="text-teal-400" /> : <Copy size={16} />}
+                  <Users size={10} /> Party Info {matches.length > 0 && `(${matches.length})`}
                 </button>
               </div>
             </div>
 
-            {/* Players connectivity indicators */}
-            <div className="border-t border-white/10 pt-5">
-              <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-                Room Members
-              </h3>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
-                  <span className="text-sm font-semibold text-white/80">Host ({room?.hostId === userId ? 'You' : 'Friend'})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {room?.memberId ? (
-                    <>
-                      <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
-                      <span className="text-sm font-semibold text-white/80">Guest ({room?.memberId === userId ? 'You' : 'Friend'})</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
-                      <span className="text-sm text-white/40 italic">Waiting for guest to join…</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Selected Preferences Summary */}
-            <div className="border-t border-white/10 pt-5">
-              <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">
-                Room Category
-              </h3>
-              <p className="text-sm font-bold text-white capitalize">{room?.mediaType}</p>
-              {room?.genres && room.genres.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {room.genres.map((gid: string) => {
-                    const matched = MOVIE_GENRES.find((g) => g.id === gid);
-                    return (
-                      <span
-                        key={gid}
-                        className="px-2 py-0.5 rounded-md border border-white/5 bg-white/5 text-[10px] text-white/50"
-                      >
-                        {matched?.name || gid}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Room Matches List */}
-            <div className="border-t border-white/10 pt-5">
-              <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-                Matches ({matches.length})
-              </h3>
-              {matches.length === 0 ? (
-                <p className="text-xs text-white/40 italic">No matches in this session yet.</p>
-              ) : (
-                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
-                  {matches.map((m: any) => (
-                    <div
-                      key={m.mediaId}
-                      className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5"
-                    >
-                      {m.posterPath && (
-                        <img
-                          src={
-                            m.posterPath.startsWith('http')
-                              ? m.posterPath
-                              : `${TMDB_IMAGE_BASE}${m.posterPath}`
-                          }
-                          alt={m.title}
-                          className="w-10 h-14 rounded-lg object-cover"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-white truncate">{m.title}</p>
-                        <span className="text-[10px] text-teal-400 font-semibold flex items-center gap-1">
-                          <Flame size={10} className="fill-teal-400" /> Matched!
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Lobby actions */}
-            <div className="border-t border-white/10 pt-5 flex gap-2">
-              <button
-                onClick={handleResetSession}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/10 bg-transparent text-white/60 hover:text-white hover:border-white/20 transition-all text-xs font-semibold"
-              >
-                <RefreshCw size={12} /> Reset Lobby
-              </button>
-              <button
-                onClick={handleLeave}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-950/20 border border-red-500/20 text-red-400 hover:bg-red-950/40 transition-all text-xs font-semibold"
-              >
-                <LogOut size={12} /> Leave Room
-              </button>
-            </div>
-          </div>
-
-          {/* Co-Swipe Card deck swiping section */}
-          <div className="lg:col-span-2 flex flex-col items-center">
             {/* If waiting for guest, display loading instruction */}
             {!room?.memberId ? (
               <div className="w-full max-w-md aspect-[3/4] rounded-3xl border border-white/10 bg-white/5 flex flex-col items-center justify-center p-8 text-center backdrop-blur-xl">
@@ -825,23 +857,41 @@ export default function WatchPartyTab() {
                     posterPath={activeCard.posterPath}
                     title={activeCard.title}
                     mediaType={room?.mediaType || 'movies'}
+                    muted={muted}
                   />
 
                   {/* Rich gradient shadow overlay for perfect readability (like TikTok/Reels) */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10 pointer-events-none" />
 
-                  {/* Top-Right Score Badge */}
-                  {activeCard.score ? (
-                    <div className="absolute top-4 right-4 z-20 inline-flex items-center gap-1 rounded-full border border-teal-500/20 bg-teal-950/60 px-3.5 py-1.5 text-sm font-black text-teal-400 backdrop-blur-xl">
-                      <Star size={14} className="text-teal-400 fill-teal-400" />
-                      {activeCard.score}
-                    </div>
-                  ) : activeCard.voteAverage ? (
-                    <div className="absolute top-4 right-4 z-20 inline-flex items-center gap-1 rounded-full border border-teal-500/20 bg-teal-950/60 px-3.5 py-1.5 text-sm font-black text-teal-400 backdrop-blur-xl">
-                      <Star size={14} className="text-teal-400 fill-teal-400" />
-                      {activeCard.voteAverage.toFixed(1)}
-                    </div>
-                  ) : null}
+                  {/* Top-Right Badges */}
+                  <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+                    {/* Mute/Unmute Speaker Button */}
+                    {playTrailers && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMuted(!muted);
+                        }}
+                        className="p-2 rounded-full border border-white/10 bg-black/60 text-white hover:bg-black/80 transition-all backdrop-blur-xl cursor-pointer"
+                        title={muted ? "Unmute Trailer" : "Mute Trailer"}
+                      >
+                        {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                      </button>
+                    )}
+
+                    {/* Score Badge */}
+                    {activeCard.score ? (
+                      <div className="inline-flex items-center gap-1 rounded-full border border-teal-500/20 bg-teal-950/60 px-3.5 py-1.5 text-sm font-black text-teal-400 backdrop-blur-xl">
+                        <Star size={14} className="text-teal-400 fill-teal-400" />
+                        {activeCard.score}
+                      </div>
+                    ) : activeCard.voteAverage ? (
+                      <div className="inline-flex items-center gap-1 rounded-full border border-teal-500/20 bg-teal-950/60 px-3.5 py-1.5 text-sm font-black text-teal-400 backdrop-blur-xl">
+                        <Star size={14} className="text-teal-400 fill-teal-400" />
+                        {activeCard.voteAverage.toFixed(1)}
+                      </div>
+                    ) : null}
+                  </div>
 
                   {/* Poster Thumbnail Layered Overlay */}
                   <div className="relative z-20 flex gap-4 items-end mb-4">
@@ -890,7 +940,7 @@ export default function WatchPartyTab() {
                   {/* Pass Button */}
                   <button
                     onClick={() => handleSwipe('down')}
-                    className="w-16 h-16 rounded-full border border-red-500/20 bg-red-950/10 hover:bg-red-950/20 text-red-500 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
+                    className="w-16 h-16 rounded-full border border-red-500/20 bg-red-950/10 hover:bg-red-950/20 text-red-500 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
                   >
                     <X size={28} />
                   </button>
@@ -898,13 +948,40 @@ export default function WatchPartyTab() {
                   {/* Like Button */}
                   <button
                     onClick={() => handleSwipe('up')}
-                    className="w-16 h-16 rounded-full border border-teal-500/20 bg-teal-950/10 hover:bg-teal-950/20 text-teal-400 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
+                    className="w-16 h-16 rounded-full border border-teal-500/20 bg-teal-950/10 hover:bg-teal-950/20 text-teal-400 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
                   >
                     <Heart size={28} className="fill-teal-400/10" />
                   </button>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Drawer Info Overlay */}
+      {showMobileDetails && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 lg:hidden backdrop-blur-sm">
+          {/* Tap outside to close */}
+          <div className="absolute inset-0" onClick={() => setShowMobileDetails(false)} />
+          
+          {/* Drawer Content */}
+          <div className="relative w-full max-h-[85vh] bg-[#070f1e] border-t border-white/10 rounded-t-3xl p-6 overflow-y-auto flex flex-col gap-6 z-10 animate-in slide-in-from-bottom duration-300">
+            <div className="w-12 h-1.5 bg-white/20 rounded-full self-center mb-1 cursor-pointer" onClick={() => setShowMobileDetails(false)} />
+            
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-black text-white">Watch Party Details</h3>
+              <button
+                onClick={() => setShowMobileDetails(false)}
+                className="text-xs text-white/50 hover:text-white font-bold bg-white/5 px-3 py-1.5 rounded-xl border border-white/10 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              {renderLobbySidebarContent()}
+            </div>
           </div>
         </div>
       )}
