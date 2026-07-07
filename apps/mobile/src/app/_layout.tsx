@@ -14,13 +14,10 @@ import { ErrorBoundary } from '@/__create/ErrorBoundary';
 import { useAuth } from '@/utils/auth/useAuth';
 import { AuthModal } from '@/utils/auth/useAuthModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { withLayoutContext, useGlobalSearchParams } from 'expo-router';
+import { Stack, useGlobalSearchParams } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { interpolate } from 'react-native-reanimated';
-import Transition from 'react-native-screen-transitions';
-import { createBlankStackNavigator } from 'react-native-screen-transitions/blank-stack';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -37,18 +34,11 @@ const queryClient = new QueryClient({
   },
 });
 
-const { Navigator } = createBlankStackNavigator();
-const TransitionStack = withLayoutContext(Navigator);
-
-function useSharedTag() {
-  const { tag } = useGlobalSearchParams();
-  return typeof tag === 'string' ? tag : 'hero';
-}
-
 export default function RootLayout() {
   const { initiate, isReady } = useAuth();
   const [timedOut, setTimedOut] = useState(false);
-  const sharedBoundTag = useSharedTag();
+
+  console.log("MOBILE_DEBUG: RootLayout render", { isReady, timedOut });
 
   useEffect(() => {
     initiate();
@@ -66,6 +56,7 @@ export default function RootLayout() {
   }, [isReady, timedOut]);
 
   if (!isReady && !timedOut) {
+    console.log("MOBILE_DEBUG: RootLayout returning null (splash gate)");
     return null;
   }
 
@@ -73,66 +64,23 @@ export default function RootLayout() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <TransitionStack screenOptions={{ headerShown: false } as any}>
-            <TransitionStack.Screen
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen
               name="(tabs)"
-              options={{ ...Transition.Presets.SharedXImage({ sharedBoundTag }) }}
             />
-            <TransitionStack.Screen
+            <Stack.Screen
               name="onboarding"
               options={{ animation: 'slide_from_bottom' }}
             />
-            <TransitionStack.Screen
+            <Stack.Screen
               name="movie/[id]"
-              options={{
-                gestureEnabled: true,
-                gestureDirection: 'vertical',
-                ...Transition.Presets.SharedXImage({ sharedBoundTag }),
-                screenStyleInterpolator: ({
-                  focused,
-                  bounds,
-                  current,
-                  layouts: { screen },
-                  progress,
-                }: any) => {
-                  'worklet';
-                  if (!focused) return {};
-                  const boundValues = bounds({
-                    id: sharedBoundTag,
-                    method: 'transform',
-                    raw: true,
-                  });
-                  const dragY = interpolate(
-                    current.gesture.normalizedY,
-                    [-1, 0, 1],
-                    [-screen.height, 0, screen.height]
-                  );
-                  const contentY = interpolate(
-                    progress,
-                    [0, 1],
-                    [dragY >= 0 ? screen.height : -screen.height, 0]
-                  );
-                  return {
-                    [sharedBoundTag]: {
-                      transform: [
-                        { translateX: boundValues.translateX },
-                        { translateY: boundValues.translateY },
-                        { scaleX: boundValues.scaleX },
-                        { scaleY: boundValues.scaleY },
-                      ],
-                    },
-                    contentStyle: {
-                      transform: [{ translateY: contentY }, { translateY: dragY }],
-                      pointerEvents: current.animating ? 'none' : 'auto',
-                    },
-                  };
-                },
-              }}
+              options={{ animation: 'slide_from_bottom' }}
             />
-          </TransitionStack>
+          </Stack>
           <AuthModal />
         </GestureHandlerRootView>
       </QueryClientProvider>
     </ErrorBoundary>
   );
 }
+
