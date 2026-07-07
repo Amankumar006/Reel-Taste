@@ -15,7 +15,6 @@ import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { Skeleton } from 'moti/skeleton';
 import Svg, { Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -289,12 +288,12 @@ export default function MovieDetailScreen() {
         {/* Skeleton */}
         {isLoading && (
           <View style={{ paddingHorizontal: 20, gap: 12 }}>
-            <Skeleton colorMode="dark" width="70%" height={32} radius={8} />
-            <Skeleton colorMode="dark" width="45%" height={20} radius={6} />
+            <View style={{ width: '70%', height: 32, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.04)' }} />
+            <View style={{ width: '45%', height: 20, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.04)' }} />
             <View style={{ height: 12 }} />
-            <Skeleton colorMode="dark" width="100%" height={14} radius={4} />
-            <Skeleton colorMode="dark" width="90%" height={14} radius={4} />
-            <Skeleton colorMode="dark" width="75%" height={14} radius={4} />
+            <View style={{ width: '100%', height: 14, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.04)' }} />
+            <View style={{ width: '90%', height: 14, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.04)' }} />
+            <View style={{ width: '75%', height: 14, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.04)' }} />
           </View>
         )}
 

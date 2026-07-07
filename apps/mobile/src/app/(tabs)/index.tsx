@@ -19,7 +19,6 @@ import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView, AnimatePresence } from 'moti';
-import { Skeleton } from 'moti/skeleton';
 import * as Haptics from 'expo-haptics';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -48,18 +47,40 @@ const TransitionPressable = (Transition as any)?.Pressable || TouchableOpacity;
 
 
 async function fetchDiscoverPage({ pageParam, genres }: { pageParam: number; genres: string[] }) {
-  const params = new URLSearchParams({ page: String(pageParam) });
-  if (genres.length > 0) params.set('genres', genres.join(','));
-  const res = await fetch(`${BASE}/api/movies?${params}`);
-  if (!res.ok) throw new Error('Failed to fetch movies');
-  return res.json() as Promise<{ movies: any[]; page: number; totalPages: number }>;
+  const url = `${BASE}/api/movies?page=${pageParam}${genres.length > 0 ? `&genres=${genres.join(',')}` : ''}`;
+  console.log("MOBILE_DEBUG: fetchDiscoverPage starting", { url });
+  try {
+    const res = await fetch(url);
+    console.log("MOBILE_DEBUG: fetchDiscoverPage status", res.status);
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Failed to fetch movies: ${res.status} ${txt}`);
+    }
+    const data = await res.json();
+    console.log("MOBILE_DEBUG: fetchDiscoverPage success, movies count =", data?.movies?.length);
+    return data as { movies: any[]; page: number; totalPages: number };
+  } catch (err) {
+    console.error("MOBILE_DEBUG: fetchDiscoverPage error", err);
+    throw err;
+  }
 }
 
 async function fetchSearch(query: string) {
-  const res = await fetch(`${BASE}/api/movies/search?q=${encodeURIComponent(query)}`);
-  if (!res.ok) throw new Error('Search failed');
-  return res.json() as Promise<{ movies: any[] }>;
+  const url = `${BASE}/api/movies/search?q=${encodeURIComponent(query)}`;
+  console.log("MOBILE_DEBUG: fetchSearch starting", { url });
+  try {
+    const res = await fetch(url);
+    console.log("MOBILE_DEBUG: fetchSearch status", res.status);
+    if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+    const data = await res.json();
+    console.log("MOBILE_DEBUG: fetchSearch success, movies count =", data?.movies?.length);
+    return data as { movies: any[] };
+  } catch (err) {
+    console.error("MOBILE_DEBUG: fetchSearch error", err);
+    throw err;
+  }
 }
+
 
 function haptic(type: 'light' | 'medium' | 'success') {
   if (Platform.OS === 'web') return;
@@ -70,8 +91,8 @@ function haptic(type: 'light' | 'medium' | 'success') {
 
 function SkeletonHero() {
   return (
-    <View style={{ marginHorizontal: 16, marginBottom: 8 }}>
-      <Skeleton colorMode="dark" width="100%" height={360} radius={24} />
+    <View style={{ marginHorizontal: 16, marginBottom: 8, height: 360, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }}>
+      <ActivityIndicator size="large" color="#2dd4bf" />
     </View>
   );
 }
@@ -79,14 +100,15 @@ function SkeletonHero() {
 function SkeletonCard() {
   return (
     <View style={{ flex: 1, marginBottom: 8 }}>
-      <Skeleton colorMode="dark" width="100%" height={230} radius={16} />
+      <View style={{ width: '100%', height: 230, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.04)' }} />
       <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
-        <Skeleton colorMode="dark" width="48%" height={32} radius={100} />
-        <Skeleton colorMode="dark" width="48%" height={32} radius={100} />
+        <View style={{ width: '48%', height: 32, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.04)' }} />
+        <View style={{ width: '48%', height: 32, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.04)' }} />
       </View>
     </View>
   );
 }
+
 
 // ── Auto-cycling Hero Carousel ─────────────────────────────────────────────
 function HeroCarousel({
@@ -927,8 +949,16 @@ export default function DiscoverScreen() {
   }
 
   const displayMovies = isSearching || mediaCategory === 'anime' || mediaCategory === 'games' ? activeMovies : activeMovies.slice(1);
-
-
+  console.log("MOBILE_DEBUG: render UI", {
+    BASE,
+    isLoading,
+    discoverLoading,
+    discoverError: discoverError?.message || null,
+    discoverMoviesCount: discoverMovies?.length || 0,
+    recommendationsCount: recommendations?.length || 0,
+    displayMoviesCount: displayMovies?.length || 0,
+    activeMoviesCount: activeMovies?.length || 0,
+  });
 
   const renderHeader = () => (
     <View style={{ paddingTop: 12 }}>
