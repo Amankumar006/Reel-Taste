@@ -78,6 +78,13 @@ export default function WatchPartyTab() {
     }
   }, []);
 
+  const matchesRef = useRef<any[]>([]);
+
+  // Update matchesRef whenever matches changes
+  useEffect(() => {
+    matchesRef.current = matches;
+  }, [matches]);
+
   // Poll room status
   useEffect(() => {
     if (!roomCode) {
@@ -102,9 +109,10 @@ export default function WatchPartyTab() {
         setRoom(data);
 
         // Detect new matches
-        if (data.matches && data.matches.length > matches.length) {
+        const currentMatches = matchesRef.current;
+        if (data.matches && data.matches.length > currentMatches.length) {
           const newMatches = data.matches.filter(
-            (m: any) => !matches.some((existing) => existing.mediaId === m.mediaId)
+            (m: any) => !currentMatches.some((existing) => existing.mediaId === m.mediaId)
           );
           if (newMatches.length > 0) {
             setLastMatch(newMatches[0]);
@@ -124,7 +132,7 @@ export default function WatchPartyTab() {
       active = false;
       clearInterval(interval);
     };
-  }, [roomCode, matches]);
+  }, [roomCode]);
 
   // Load cards queue based on room settings
   useEffect(() => {
