@@ -161,6 +161,8 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 };
 
 const cacheDir = path.join(__dirname, "caches");
+// Ensure caches dir exists (it's gitignored so absent on fresh clone / after cache wipe)
+fs.mkdirSync(cacheDir, { recursive: true });
 
 config.cacheStores = () => [
 	new FileStore({
