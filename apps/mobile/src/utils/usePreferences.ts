@@ -18,13 +18,14 @@ export interface Preferences {
 }
 
 const DEFAULT_PREFS: Preferences = {
-  onboarded: false,
+  onboarded: true,  // skip onboarding gate — users can set genres in Prefs tab
   genres: [],
   services: [],
   genreWeights: {},
   ratings: {},
   ratedMovieData: {},
 };
+
 
 async function loadPrefs(): Promise<Preferences> {
   try {

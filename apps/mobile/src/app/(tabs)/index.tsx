@@ -745,8 +745,13 @@ export default function DiscoverScreen() {
   const isSearching = searchQuery.trim().length >= 2;
 
   useEffect(() => {
-    if (loaded && !prefs.onboarded) router.replace('/onboarding' as any);
+    if (loaded && !prefs.onboarded) {
+      // Defer navigation so TransitionStack navigator is fully mounted first
+      const t = setTimeout(() => router.replace('/onboarding' as any), 300);
+      return () => clearTimeout(t);
+    }
   }, [loaded, prefs.onboarded, router]);
+
 
   const [mediaCategory, setMediaCategory] = useState<'movies' | 'anime' | 'games'>('movies');
 
