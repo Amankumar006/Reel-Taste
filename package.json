@@ -1,4 +1,6 @@
 {
+  "name": "reel-taste",
+  "private": true,
   "workspaces": [
     "apps/*"
   ],
