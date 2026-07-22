@@ -15960,6 +15960,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"reel-taste@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "reel-taste@workspace:."
+  dependencies:
+    eslint: "npm:^9.27.0"
+    oxfmt: "npm:^0.35.0"
+    oxlint: "npm:^1.50.0"
+    typescript-eslint: "npm:^8.33.0"
+  languageName: unknown
+  linkType: soft
+
 "regenerate-unicode-properties@npm:^10.2.2":
   version: 10.2.2
   resolution: "regenerate-unicode-properties@npm:10.2.2"
@@ -16275,17 +16286,6 @@ __metadata:
   checksum: 10c0/72c9c768f3fabeaeff228b6364e6600c169d6c231a4324c47c34880fd8961aebacd974cf905ecc2db75e56c6491bdd676409a06aecf589791bf419cd41d06e76
   languageName: node
   linkType: hard
-
-"root-workspace-0b6124@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "root-workspace-0b6124@workspace:."
-  dependencies:
-    eslint: "npm:^9.27.0"
-    oxfmt: "npm:^0.35.0"
-    oxlint: "npm:^1.50.0"
-    typescript-eslint: "npm:^8.33.0"
-  languageName: unknown
-  linkType: soft
 
 "rou3@npm:^0.7.12":
   version: 0.7.12
