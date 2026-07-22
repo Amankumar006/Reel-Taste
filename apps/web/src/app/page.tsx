@@ -667,55 +667,55 @@ export default function HomePage() {
       </main>
 
       {/* Floating glassmorphism tab bar */}
-      <nav className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-[calc(100vw-1.5rem)] w-auto">
-        <div className="flex items-center gap-1 sm:gap-2 rounded-full border border-white/15 bg-[#0a1628]/85 p-1.5 sm:p-2 backdrop-blur-xl shadow-2xl overflow-x-auto no-scrollbar">
+      <nav className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[calc(100vw-1.25rem)] max-w-lg">
+        <div className="grid grid-cols-4 gap-1 rounded-2xl sm:rounded-full border border-white/15 bg-[#0a1628]/90 p-1 sm:p-1.5 backdrop-blur-xl shadow-2xl">
           <button
             type="button"
             onClick={() => setTab('discover')}
-            className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all shrink-0 whitespace-nowrap ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 rounded-xl sm:rounded-full py-1.5 sm:py-2.5 px-1 sm:px-4 text-[11px] sm:text-sm font-medium transition-all ${
               tab === 'discover'
-                ? 'bg-white/20 text-white shadow-lg'
+                ? 'bg-white/20 text-white shadow-lg font-semibold'
                 : 'text-white/60 hover:text-white/80'
             }`}
           >
             <Compass className="w-4 h-4 shrink-0" />
-            <span>Discover</span>
+            <span className="truncate">Discover</span>
           </button>
           <button
             type="button"
             onClick={() => setTab('rated')}
-            className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all shrink-0 whitespace-nowrap ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 rounded-xl sm:rounded-full py-1.5 sm:py-2.5 px-1 sm:px-4 text-[11px] sm:text-sm font-medium transition-all ${
               tab === 'rated'
-                ? 'bg-white/20 text-white shadow-lg'
+                ? 'bg-white/20 text-white shadow-lg font-semibold'
                 : 'text-white/60 hover:text-white/80'
             }`}
           >
             <Heart className="w-4 h-4 shrink-0" />
-            <span>Rated</span>
+            <span className="truncate">Rated</span>
           </button>
           <button
             type="button"
             onClick={() => setTab('party')}
-            className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all shrink-0 whitespace-nowrap ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 rounded-xl sm:rounded-full py-1.5 sm:py-2.5 px-1 sm:px-4 text-[11px] sm:text-sm font-medium transition-all ${
               tab === 'party'
-                ? 'bg-white/20 text-white shadow-lg'
+                ? 'bg-white/20 text-white shadow-lg font-semibold'
                 : 'text-white/60 hover:text-white/80'
             }`}
           >
             <Sparkles className="w-4 h-4 shrink-0" />
-            <span>Watch Party</span>
+            <span className="truncate">Watch Party</span>
           </button>
           <button
             type="button"
             onClick={() => setTab('preferences')}
-            className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all shrink-0 whitespace-nowrap ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 rounded-xl sm:rounded-full py-1.5 sm:py-2.5 px-1 sm:px-4 text-[11px] sm:text-sm font-medium transition-all ${
               tab === 'preferences'
-                ? 'bg-white/20 text-white shadow-lg'
+                ? 'bg-white/20 text-white shadow-lg font-semibold'
                 : 'text-white/60 hover:text-white/80'
             }`}
           >
             <Settings className="w-4 h-4 shrink-0" />
-            <span>Settings</span>
+            <span className="truncate">Settings</span>
           </button>
         </div>
       </nav>
