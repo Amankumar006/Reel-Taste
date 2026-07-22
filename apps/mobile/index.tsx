@@ -1,8 +1,8 @@
 import ExceptionsManager from "react-native/Libraries/Core/ExceptionsManager";
 
 if (__DEV__) {
-	ExceptionsManager.handleException = (_error, _isFatal) => {
-		// no-op
+	ExceptionsManager.handleException = (error, isFatal) => {
+		console.error("MOBILE_DEBUG Exception caught:", error, { isFatal });
 	};
 }
 

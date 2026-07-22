@@ -8,7 +8,9 @@
 			"developmentClient": true,
 			"distribution": "internal",
 			"env": {
-				"SENTRY_DISABLE_AUTO_UPLOAD": "true"
+				"SENTRY_DISABLE_AUTO_UPLOAD": "true",
+				"EXPO_PUBLIC_BASE_URL": "https://reel-taste-web.vercel.app",
+				"EXPO_PUBLIC_PROXY_BASE_URL": "https://reel-taste-web.vercel.app"
 			}
 		},
 		"preview": {
@@ -17,7 +19,9 @@
 				"buildType": "apk"
 			},
 			"env": {
-				"SENTRY_DISABLE_AUTO_UPLOAD": "true"
+				"SENTRY_DISABLE_AUTO_UPLOAD": "true",
+				"EXPO_PUBLIC_BASE_URL": "https://reel-taste-web.vercel.app",
+				"EXPO_PUBLIC_PROXY_BASE_URL": "https://reel-taste-web.vercel.app"
 			}
 		},
 		"production": {
@@ -26,7 +30,9 @@
 				"buildType": "app-bundle"
 			},
 			"env": {
-				"SENTRY_DISABLE_AUTO_UPLOAD": "true"
+				"SENTRY_DISABLE_AUTO_UPLOAD": "true",
+				"EXPO_PUBLIC_BASE_URL": "https://reel-taste-web.vercel.app",
+				"EXPO_PUBLIC_PROXY_BASE_URL": "https://reel-taste-web.vercel.app"
 			}
 		}
 	},

@@ -35,7 +35,6 @@ import {
   Grid2x2,
   Info,
 } from 'lucide-react-native';
-import Transition from 'react-native-screen-transitions';
 import { usePreferences } from '@/utils/usePreferences';
 import { getRecommendations } from '@/utils/recommend';
 import { TMDB_IMAGE_BASE, TMDB_BACKDROP_BASE } from '@/utils/constants';
@@ -44,14 +43,17 @@ const BASE = process.env.EXPO_PUBLIC_BASE_URL ?? '';
 const { width: SW, height: SH } = Dimensions.get('window');
 
 // Safe fallback for Transition.Pressable if the native transitions module is not present/supported in Expo Go
-const TransitionPressable = (Transition as any)?.Pressable || TouchableOpacity;
+const TransitionPressable = ({ sharedBoundTag, ...props }: any) => <TouchableOpacity {...props} />;
 
 
 async function fetchDiscoverPage({ pageParam, genres }: { pageParam: number; genres: string[] }) {
   const url = `${BASE}/api/movies?page=${pageParam}${genres.length > 0 ? `&genres=${genres.join(',')}` : ''}`;
   console.log("MOBILE_DEBUG: fetchDiscoverPage starting", { url });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
     console.log("MOBILE_DEBUG: fetchDiscoverPage status", res.status);
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
@@ -61,6 +63,7 @@ async function fetchDiscoverPage({ pageParam, genres }: { pageParam: number; gen
     console.log("MOBILE_DEBUG: fetchDiscoverPage success, movies count =", data?.movies?.length);
     return data as { movies: any[]; page: number; totalPages: number };
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error("MOBILE_DEBUG: fetchDiscoverPage error", err);
     throw err;
   }

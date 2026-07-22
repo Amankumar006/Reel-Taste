@@ -29,13 +29,12 @@ import {
   User,
   Bookmark,
 } from 'lucide-react-native';
-import Transition from 'react-native-screen-transitions';
 import { useQuery } from '@tanstack/react-query';
 import { usePreferences } from '@/utils/usePreferences';
 import { useWatchlist } from '@/utils/useWatchlist';
 import { TMDB_IMAGE_BASE, TMDB_BACKDROP_BASE, TMDB_CAST_BASE } from '@/utils/constants';
 
-const TransitionView = (Transition as any)?.View || View;
+const TransitionView = ({ sharedBoundTag, ...props }: any) => <View {...props} />;
 
 
 const BASE = process.env.EXPO_PUBLIC_BASE_URL ?? '';

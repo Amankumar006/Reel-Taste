@@ -88,11 +88,66 @@ function AnimatedTabIcon({
   );
 }
 
-export default function TabLayout() {
-  const { prefs } = usePreferences();
-  const { count: watchlistCount } = useWatchlist();
-  const ratedCount = Object.keys(prefs.ratings ?? {}).length;
+const DiscoverTabButton = (props: any) => (
+  <AnimatedTabIcon
+    {...props}
+    focused={props.accessibilityState?.selected ?? false}
+    iconFn={(c) => <Compass size={24} color={c} />}
+    label="Discover"
+    onPress={props.onPress ?? undefined}
+  />
+);
 
+const PartyTabButton = (props: any) => (
+  <AnimatedTabIcon
+    {...props}
+    focused={props.accessibilityState?.selected ?? false}
+    iconFn={(c) => <Users size={24} color={c} />}
+    label="Party"
+    onPress={props.onPress ?? undefined}
+  />
+);
+
+const WatchlistTabButton = (props: any) => {
+  const { count } = useWatchlist();
+  return (
+    <AnimatedTabIcon
+      {...props}
+      focused={props.accessibilityState?.selected ?? false}
+      iconFn={(c) => <Bookmark size={24} color={c} />}
+      label="Watchlist"
+      badge={count}
+      onPress={props.onPress ?? undefined}
+    />
+  );
+};
+
+const RatedTabButton = (props: any) => {
+  const { prefs } = usePreferences();
+  const ratedCount = Object.keys(prefs.ratings ?? {}).length;
+  return (
+    <AnimatedTabIcon
+      {...props}
+      focused={props.accessibilityState?.selected ?? false}
+      iconFn={(c) => <Heart size={24} color={c} />}
+      label="Rated"
+      badge={ratedCount > 0 ? ratedCount : undefined}
+      onPress={props.onPress ?? undefined}
+    />
+  );
+};
+
+const SettingsTabButton = (props: any) => (
+  <AnimatedTabIcon
+    {...props}
+    focused={props.accessibilityState?.selected ?? false}
+    iconFn={(c) => <Settings2 size={24} color={c} />}
+    label="Prefs"
+    onPress={props.onPress ?? undefined}
+  />
+);
+
+export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -108,68 +163,31 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          tabBarButton: (props) => (
-            <AnimatedTabIcon
-              focused={props.accessibilityState?.selected ?? false}
-              iconFn={(c) => <Compass size={24} color={c} />}
-              label="Discover"
-              onPress={props.onPress ?? undefined}
-            />
-          ),
+          tabBarButton: DiscoverTabButton,
         }}
       />
       <Tabs.Screen
         name="watchparty"
         options={{
-          tabBarButton: (props) => (
-            <AnimatedTabIcon
-              focused={props.accessibilityState?.selected ?? false}
-              iconFn={(c) => <Users size={24} color={c} />}
-              label="Party"
-              onPress={props.onPress ?? undefined}
-            />
-          ),
+          tabBarButton: PartyTabButton,
         }}
       />
       <Tabs.Screen
         name="watchlist"
         options={{
-          tabBarButton: (props) => (
-            <AnimatedTabIcon
-              focused={props.accessibilityState?.selected ?? false}
-              iconFn={(c) => <Bookmark size={24} color={c} />}
-              label="Watchlist"
-              badge={watchlistCount}
-              onPress={props.onPress ?? undefined}
-            />
-          ),
+          tabBarButton: WatchlistTabButton,
         }}
       />
       <Tabs.Screen
         name="rated"
         options={{
-          tabBarButton: (props) => (
-            <AnimatedTabIcon
-              focused={props.accessibilityState?.selected ?? false}
-              iconFn={(c) => <Heart size={24} color={c} />}
-              label="Rated"
-              badge={ratedCount > 0 ? ratedCount : undefined}
-              onPress={props.onPress ?? undefined}
-            />
-          ),
+          tabBarButton: RatedTabButton,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          tabBarButton: (props) => (
-            <AnimatedTabIcon
-              focused={props.accessibilityState?.selected ?? false}
-              iconFn={(c) => <Settings2 size={24} color={c} />}
-              label="Prefs"
-              onPress={props.onPress ?? undefined}
-            />
-          ),
+          tabBarButton: SettingsTabButton,
         }}
       />
     </Tabs>

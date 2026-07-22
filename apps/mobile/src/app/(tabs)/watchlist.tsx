@@ -10,11 +10,10 @@ import { MotiView, AnimatePresence } from 'moti';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Bookmark, Film, Trash2, LayoutGrid, List, Star } from 'lucide-react-native';
-import Transition from 'react-native-screen-transitions';
 import { useWatchlist } from '@/utils/useWatchlist';
 import { TMDB_IMAGE_BASE } from '@/utils/constants';
 
-const TransitionPressable = (Transition as any)?.Pressable || TouchableOpacity;
+const TransitionPressable = ({ sharedBoundTag, ...props }: any) => <TouchableOpacity {...props} />;
 
 
 type ViewMode = 'list' | 'grid';

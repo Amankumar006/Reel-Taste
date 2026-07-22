@@ -186,4 +186,50 @@ config.transformer = {
 	},
 };
 
+const https = require("node:https");
+
+config.server = {
+	...config.server,
+	enhanceMiddleware: (middleware, metroServer) => {
+		return (req, res, next) => {
+			if (req.url.startsWith("/_proxy/")) {
+				const targetUrl = "https://reel-taste-web.vercel.app" + req.url.slice(7);
+				console.log(`METRO_PROXY: Proxying ${req.url} to ${targetUrl}`);
+
+				const urlObj = new URL(targetUrl);
+				const options = {
+					hostname: urlObj.hostname,
+					port: 443,
+					path: urlObj.pathname + urlObj.search,
+					method: req.method,
+					headers: {
+						...req.headers,
+						host: urlObj.hostname,
+					},
+					rejectUnauthorized: false,
+				};
+
+				const proxyReq = https.request(options, (proxyRes) => {
+					res.writeHead(proxyRes.statusCode, proxyRes.headers);
+					proxyRes.pipe(res, { end: true });
+				});
+
+				proxyReq.on("error", (err) => {
+					console.error("METRO_PROXY: Proxy error", err);
+					res.writeHead(500, { "Content-Type": "text/plain" });
+					res.end(`Proxy error: ${err.message}`);
+				});
+
+				if (req.method === "GET" || req.method === "HEAD") {
+					proxyReq.end();
+				} else {
+					req.pipe(proxyReq, { end: true });
+				}
+				return;
+			}
+			return middleware(req, res, next);
+		};
+	},
+};
+
 module.exports = config;

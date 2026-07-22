@@ -63,9 +63,11 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   prefs: DEFAULT_PREFS,
   loaded: false,
   load: async () => {
+    console.log("MOBILE_DEBUG: usePreferencesStore.load() called, current loaded =", get().loaded);
     if (get().loaded) return;
 
     if (!loadPromise) {
+      console.log("MOBILE_DEBUG: Creating loadPromise");
       const timeout = new Promise<Preferences>((resolve) =>
         setTimeout(() => {
           console.warn('AsyncStorage loadPrefs timed out, fallback to defaults');
@@ -77,12 +79,15 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
 
     try {
       const p = await loadPromise;
+      console.log("MOBILE_DEBUG: loadPromise resolved", p);
       set({ prefs: p, loaded: true });
+      console.log("MOBILE_DEBUG: usePreferencesStore loaded set to true");
     } catch (err) {
       console.error('AsyncStorage loadPrefs failed:', err);
       set({ prefs: DEFAULT_PREFS, loaded: true });
     }
   },
+
   completeOnboarding: (genres, services) => {
     const weights: Record<string, number> = {};
     genres.forEach((g) => {

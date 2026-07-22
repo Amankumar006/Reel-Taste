@@ -56,3 +56,8 @@ playwright-report
 test-results
 
 .vercel
+.expo
+.neon
+.agents
+skills-lock.json
+

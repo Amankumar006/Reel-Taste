@@ -18,11 +18,10 @@ import {
   List,
   ArrowUpDown,
 } from 'lucide-react-native';
-import Transition from 'react-native-screen-transitions';
 import { usePreferences } from '@/utils/usePreferences';
 import { TMDB_IMAGE_BASE } from '@/utils/constants';
 
-const TransitionPressable = (Transition as any)?.Pressable || TouchableOpacity;
+const TransitionPressable = ({ sharedBoundTag, ...props }: any) => <TouchableOpacity {...props} />;
 
 
 type Filter = 'all' | 'liked' | 'passed';
