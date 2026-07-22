@@ -667,55 +667,55 @@ export default function HomePage() {
       </main>
 
       {/* Floating glassmorphism tab bar */}
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 p-2 backdrop-blur-xl shadow-2xl">
+      <nav className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-[calc(100vw-1.5rem)] w-auto">
+        <div className="flex items-center gap-1 sm:gap-2 rounded-full border border-white/15 bg-[#0a1628]/85 p-1.5 sm:p-2 backdrop-blur-xl shadow-2xl overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setTab('discover')}
-            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all shrink-0 whitespace-nowrap ${
               tab === 'discover'
                 ? 'bg-white/20 text-white shadow-lg'
                 : 'text-white/60 hover:text-white/80'
             }`}
           >
-            <Compass size={16} />
-            Discover
+            <Compass className="w-4 h-4 shrink-0" />
+            <span>Discover</span>
           </button>
           <button
             type="button"
             onClick={() => setTab('rated')}
-            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all shrink-0 whitespace-nowrap ${
               tab === 'rated'
                 ? 'bg-white/20 text-white shadow-lg'
                 : 'text-white/60 hover:text-white/80'
             }`}
           >
-            <Heart size={16} />
-            Rated
+            <Heart className="w-4 h-4 shrink-0" />
+            <span>Rated</span>
           </button>
           <button
             type="button"
             onClick={() => setTab('party')}
-            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all shrink-0 whitespace-nowrap ${
               tab === 'party'
                 ? 'bg-white/20 text-white shadow-lg'
                 : 'text-white/60 hover:text-white/80'
             }`}
           >
-            <Sparkles size={16} />
-            Watch Party
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span>Watch Party</span>
           </button>
           <button
             type="button"
             onClick={() => setTab('preferences')}
-            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all ${
+            className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all shrink-0 whitespace-nowrap ${
               tab === 'preferences'
                 ? 'bg-white/20 text-white shadow-lg'
                 : 'text-white/60 hover:text-white/80'
             }`}
           >
-            <Settings size={16} />
-            Settings
+            <Settings className="w-4 h-4 shrink-0" />
+            <span>Settings</span>
           </button>
         </div>
       </nav>
